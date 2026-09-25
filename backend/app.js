@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./src/config/db.js";
 import authRoutes from "./src/routes/authRoutes.js"
+import profileRoutes from "./src/routes/profileRoutes.js"
+import exerciseRoutes from "./src/routes/exerciseRoutes.js"
 
 dotenv.config();
 
@@ -15,6 +17,8 @@ app.use(express.json());
 connectDB()
 
 app.use("/api/auth", authRoutes)
+app.use("/api", profileRoutes)
+app.use("/api/exercises", exerciseRoutes)
 
 app.get("/", (req, res) => {
   res.json({

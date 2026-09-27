@@ -243,3 +243,246 @@ export const getWorkoutHistory = async (req, res) => {
     });
   }
 };
+
+// Get workout progress
+export const getWorkoutProgress = async (req, res) => {
+  try {
+    const workouts = await Workout.find({
+      user: req.user.userId,
+      completed: true,
+    })
+      .populate("exercises.exercise")
+      .sort({ completedAt: -1 });
+
+    // No completed workouts
+    if (workouts.length === 0) {
+      return res.status(200).json({
+        totalWorkouts: 0,
+        totalDuration: 0,
+        averageWorkoutDuration: 0,
+        totalVolume: 0,
+        muscleGroups: {},
+        exercises: {},
+        recentWorkouts: [],
+      });
+    }
+
+    let totalDuration = 0;
+    let totalVolume = 0;
+
+    const muscleGroups = {};
+    const exerciseStats = {};
+
+    workouts.forEach((workout) => {
+      // Total workout duration
+      totalDuration += workout.duration || 0;
+
+      workout.exercises.forEach((workoutExercise) => {
+        const exercise = workoutExercise.exercise;
+
+        if (!exercise) {
+          return;
+        }
+
+        const exerciseName = exercise.name;
+        const muscleGroup = exercise.muscleGroup;
+
+        // Count muscle groups
+        if (muscleGroup) {
+          muscleGroups[muscleGroup] =
+            (muscleGroups[muscleGroup] || 0) + 1;
+        }
+
+        // Create exercise statistics
+        if (!exerciseStats[exerciseName]) {
+          exerciseStats[exerciseName] = {
+            exerciseId: exercise._id,
+            muscleGroup,
+            totalSets: 0,
+            totalReps: 0,
+            totalVolume: 0,
+            maxWeight: 0,
+          };
+        }
+
+        // Process performed sets
+        workoutExercise.performedSets.forEach((set) => {
+          if (!set.completed) {
+            return;
+          }
+
+          const reps = set.reps || 0;
+          const weight = set.weight || 0;
+
+          const volume = reps * weight;
+
+          totalVolume += volume;
+
+          exerciseStats[exerciseName].totalSets += 1;
+          exerciseStats[exerciseName].totalReps += reps;
+          exerciseStats[exerciseName].totalVolume += volume;
+
+          if (weight > exerciseStats[exerciseName].maxWeight) {
+            exerciseStats[exerciseName].maxWeight = weight;
+          }
+        });
+      });
+    });
+
+    const averageWorkoutDuration =
+      Math.round(totalDuration / workouts.length);
+
+    // Return recent workouts
+    const recentWorkouts = workouts.slice(0, 5).map((workout) => ({
+      _id: workout._id,
+      name: workout.name,
+      duration: workout.duration,
+      completedAt: workout.completedAt,
+    }));
+
+    res.status(200).json({
+      totalWorkouts: workouts.length,
+      totalDuration,
+      averageWorkoutDuration,
+      totalVolume,
+      muscleGroups,
+      exercises: exerciseStats,
+      recentWorkouts,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to get workout progress",
+      error: error.message,
+    });
+  }
+};
+
+// Get weekly workout progress
+// Get weekly workout progress
+export const getWeeklyProgress = async (req, res) => {
+  try {
+    const now = new Date();
+
+    // Get current day in UTC
+    const currentDay = now.getUTCDay();
+
+    // Monday = 1, Sunday = 0
+    const daysFromMonday = currentDay === 0 ? 6 : currentDay - 1;
+
+    // Start of current week - Monday 00:00 UTC
+    const startOfThisWeek = new Date(now);
+
+    startOfThisWeek.setUTCDate(
+      startOfThisWeek.getUTCDate() - daysFromMonday
+    );
+
+    startOfThisWeek.setUTCHours(0, 0, 0, 0);
+
+    // Start of previous week
+    const startOfLastWeek = new Date(startOfThisWeek);
+
+    startOfLastWeek.setUTCDate(
+      startOfLastWeek.getUTCDate() - 7
+    );
+
+    const workouts = await Workout.find({
+      user: req.user.userId,
+      completed: true,
+      completedAt: {
+        $gte: startOfLastWeek,
+        $lte: now,
+      },
+    })
+      .populate("exercises.exercise")
+      .sort({ completedAt: -1 });
+
+    const thisWeek = {
+      workouts: 0,
+      duration: 0,
+      volume: 0,
+    };
+
+    const lastWeek = {
+      workouts: 0,
+      duration: 0,
+      volume: 0,
+    };
+
+    const dailyWorkouts = {};
+
+    // Create Monday -> Sunday
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfThisWeek);
+
+      date.setUTCDate(
+        date.getUTCDate() + i
+      );
+
+      const dateKey = date.toISOString().split("T")[0];
+
+      dailyWorkouts[dateKey] = {
+        date: dateKey,
+        workouts: 0,
+        duration: 0,
+        volume: 0,
+      };
+    }
+
+    // Calculate statistics
+    workouts.forEach((workout) => {
+      const completedDate = new Date(workout.completedAt);
+
+      let workoutVolume = 0;
+
+      workout.exercises.forEach((workoutExercise) => {
+        workoutExercise.performedSets.forEach((set) => {
+          if (!set.completed) {
+            return;
+          }
+
+          workoutVolume +=
+            (set.reps || 0) * (set.weight || 0);
+        });
+      });
+
+      // Current week
+      if (completedDate >= startOfThisWeek) {
+        thisWeek.workouts += 1;
+        thisWeek.duration += workout.duration || 0;
+        thisWeek.volume += workoutVolume;
+
+        const dateKey = completedDate
+          .toISOString()
+          .split("T")[0];
+
+        if (dailyWorkouts[dateKey]) {
+          dailyWorkouts[dateKey].workouts += 1;
+
+          dailyWorkouts[dateKey].duration +=
+            workout.duration || 0;
+
+          dailyWorkouts[dateKey].volume +=
+            workoutVolume;
+        }
+      }
+
+      // Previous week
+      else {
+        lastWeek.workouts += 1;
+        lastWeek.duration += workout.duration || 0;
+        lastWeek.volume += workoutVolume;
+      }
+    });
+
+    res.status(200).json({
+      thisWeek,
+      lastWeek,
+      dailyWorkouts: Object.values(dailyWorkouts),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to get weekly progress",
+      error: error.message,
+    });
+  }
+};

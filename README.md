@@ -375,3 +375,29 @@ This project is created for educational and portfolio purposes.
 
 From now on, we'll call the project **IronMind** everywhere—folder names, GitHub repo, UI branding, README, and eventually the AI Coach. 💪🧠
 ```
+
+AUTH
+├── Register ✅
+├── Login ✅
+└── JWT Protected Routes ✅
+
+WORKOUTS
+├── Create workout ✅
+├── Get workouts ✅
+├── Get workout by ID ✅
+├── Update workout ✅
+├── Delete workout ✅
+└── Complete workout ✅
+
+WORKOUT TRACKING
+├── Performed sets ✅
+├── Reps ✅
+├── Weight ✅
+├── Duration ✅
+└── Completion date ✅
+
+HISTORY
+└── GET /workouts/history ✅
+
+PROGRESS
+└── GET /workouts/progress ✅

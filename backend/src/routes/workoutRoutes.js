@@ -8,10 +8,10 @@ import {
   deleteWorkout,
   completeWorkout,
   getWorkoutHistory,
+  getWorkoutProgress,
+  getWeeklyProgress,
 } from "../controllers/workoutController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
-
-
 
 const router = express.Router();
 
@@ -23,6 +23,12 @@ router.get("/", authMiddleware, getWorkouts);
 
 // completed workout history
 router.get("/history", authMiddleware, getWorkoutHistory);
+
+// workout progress
+router.get("/progress", authMiddleware, getWorkoutProgress);
+
+// get weekly progress
+router.get("/progress/weekly", authMiddleware, getWeeklyProgress);
 
 // Get single workout
 router.get("/:id", authMiddleware, getWorkoutById);

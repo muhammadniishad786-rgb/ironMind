@@ -5,6 +5,7 @@ import connectDB from "./src/config/db.js";
 import authRoutes from "./src/routes/authRoutes.js"
 import profileRoutes from "./src/routes/profileRoutes.js"
 import exerciseRoutes from "./src/routes/exerciseRoutes.js"
+import workoutRoutes from "./src/routes/workoutRoutes.js"
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ connectDB()
 app.use("/api/auth", authRoutes)
 app.use("/api", profileRoutes)
 app.use("/api/exercises", exerciseRoutes)
+app.use("/api/workouts", workoutRoutes)
 
 app.get("/", (req, res) => {
   res.json({

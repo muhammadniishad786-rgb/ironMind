@@ -12,53 +12,153 @@ import {
   getWeeklyProgress,
   getPersonalRecords,
   getExerciseProgression,
+  getProgressDashboard,
   completeWorkoutExercise,
+  removeWorkoutExercise,
 } from "../controllers/workoutController.js";
+
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Create workout
-router.post("/", authMiddleware, createWorkout);
+// =========================
+// CREATE WORKOUT
+// =========================
 
-// Get all logged-in user's workouts
-router.get("/", authMiddleware, getWorkouts);
+router.post(
+  "/",
+  authMiddleware,
+  createWorkout
+);
 
-// completed workout history
-router.get("/history", authMiddleware, getWorkoutHistory);
+// =========================
+// GET ALL USER WORKOUTS
+// =========================
 
-// workout progress
-router.get("/progress", authMiddleware, getWorkoutProgress);
+router.get(
+  "/",
+  authMiddleware,
+  getWorkouts
+);
 
-// to get personal records
-router.get("/progress/pr", authMiddleware, getPersonalRecords);
+// =========================
+// WORKOUT HISTORY
+// =========================
 
-// get weekly progress
-router.get("/progress/weekly", authMiddleware, getWeeklyProgress);
+router.get(
+  "/history",
+  authMiddleware,
+  getWorkoutHistory
+);
 
-// get exercise progress
+// =========================
+// WORKOUT PROGRESS
+// =========================
+
+router.get(
+  "/progress",
+  authMiddleware,
+  getWorkoutProgress
+);
+
+// =========================
+// PROGRESS DASHBOARD
+// =========================
+
+router.get(
+  "/progress/dashboard",
+  authMiddleware,
+  getProgressDashboard
+);
+
+// =========================
+// PERSONAL RECORDS
+// =========================
+
+router.get(
+  "/progress/pr",
+  authMiddleware,
+  getPersonalRecords
+);
+
+// =========================
+// WEEKLY PROGRESS
+// =========================
+
+router.get(
+  "/progress/weekly",
+  authMiddleware,
+  getWeeklyProgress
+);
+
+// =========================
+// EXERCISE PROGRESS
+// =========================
+
 router.get(
   "/progress/exercise/:exerciseId",
   authMiddleware,
-  getExerciseProgression,
+  getExerciseProgression
 );
 
-// Get single workout
-router.get("/:id", authMiddleware, getWorkoutById);
+// =========================
+// GET SINGLE WORKOUT
+// =========================
 
-// Update workout
-router.put("/:id", authMiddleware, updateWorkout);
+router.get(
+  "/:id",
+  authMiddleware,
+  getWorkoutById
+);
 
-// Delete workout
-router.delete("/:id", authMiddleware, deleteWorkout);
+// =========================
+// UPDATE WORKOUT
+// =========================
 
-// Complete workout
-router.patch("/:id/complete", authMiddleware, completeWorkout);
+router.put(
+  "/:id",
+  authMiddleware,
+  updateWorkout
+);
+
+// =========================
+// DELETE WORKOUT
+// =========================
+
+router.delete(
+  "/:id",
+  authMiddleware,
+  deleteWorkout
+);
+
+// =========================
+// COMPLETE WORKOUT
+// =========================
+
+router.patch(
+  "/:id/complete",
+  authMiddleware,
+  completeWorkout
+);
+
+// =========================
+// COMPLETE INDIVIDUAL EXERCISE
+// =========================
 
 router.patch(
   "/:workoutId/exercises/:exerciseId/complete",
   authMiddleware,
   completeWorkoutExercise
+);
+
+// =========================
+// REMOVE EXERCISE FROM WORKOUT
+// =========================
+
+router.delete(
+  "/:workoutId/exercises/:exerciseId",
+  authMiddleware,
+  removeWorkoutExercise
 );
 
 export default router;

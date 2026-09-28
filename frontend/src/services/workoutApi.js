@@ -104,3 +104,16 @@ export const completeWorkoutExercise = (
     `/workouts/${workoutId}/exercises/${exerciseId}/complete`
   );
 };
+
+// =========================
+// REMOVE EXERCISE FROM WORKOUT
+// =========================
+
+export const removeWorkoutExercise = (
+  workoutId,
+  exerciseId
+) => {
+  return api.delete(
+    `/workouts/${workoutId}/exercises/${exerciseId}`
+  );
+};

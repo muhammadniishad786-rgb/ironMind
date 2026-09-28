@@ -28,14 +28,14 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       icon: Dumbbell,
     },
     {
-      name: "Progress",
-      path: "/progress",
-      icon: ChartNoAxesCombined,
-    },
-    {
         name: "Exercises",
         path: "/exercises",
         icon: Dumbbell
+    },
+    {
+      name: "Progress",
+      path: "/progress",
+      icon: ChartNoAxesCombined,
     },
     {
       name: "Profile",

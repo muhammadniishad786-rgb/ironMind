@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 import {
   ArrowLeft,
@@ -17,6 +21,10 @@ import {
   Repeat,
   Trophy,
   Trash2,
+  PlayCircle,
+  Square,
+  Plus,
+  Minus,
 } from "lucide-react";
 
 import {
@@ -24,10 +32,12 @@ import {
   clearSelectedWorkout,
   completeWorkoutExercise,
   removeWorkoutExercise,
+  completeWorkout,
 } from "../../store/slices/workoutSlice";
 
 const WorkoutDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
 
   // =========================
@@ -37,6 +47,15 @@ const WorkoutDetails = () => {
   const [removingExerciseId, setRemovingExerciseId] =
     useState(null);
 
+  const [isWorkoutStarted, setIsWorkoutStarted] =
+    useState(false);
+
+  const [workoutSeconds, setWorkoutSeconds] =
+    useState(0);
+
+  const [performedSets, setPerformedSets] =
+    useState({});
+
   // =========================
   // REDUX STATE
   // =========================
@@ -45,10 +64,15 @@ const WorkoutDetails = () => {
     selectedWorkout,
     detailsLoading,
     detailsError,
+
     exerciseCompleteLoading,
     exerciseCompleteError,
+
     exerciseRemoveLoading,
     exerciseRemoveError,
+
+    completeWorkoutLoading,
+    completeWorkoutError,
   } = useSelector((state) => state.workout);
 
   // =========================
@@ -64,10 +88,216 @@ const WorkoutDetails = () => {
   }, [dispatch, id]);
 
   // =========================
+  // WORKOUT TIMER
+  // =========================
+
+  useEffect(() => {
+    if (!isWorkoutStarted) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setWorkoutSeconds((previous) => previous + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isWorkoutStarted]);
+
+  // =========================
+  // FORMAT TIMER
+  // =========================
+
+  const formatTimer = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+
+    const minutes = Math.floor(
+      (seconds % 3600) / 60
+    );
+
+    const remainingSeconds =
+      seconds % 60;
+
+    return [
+      hours,
+      minutes,
+      remainingSeconds,
+    ]
+      .map((value) =>
+        String(value).padStart(2, "0")
+      )
+      .join(":");
+  };
+
+  // =========================
+  // START WORKOUT
+  // =========================
+
+  const handleStartWorkout = () => {
+    setIsWorkoutStarted(true);
+    setWorkoutSeconds(0);
+  };
+
+  // =========================
+  // CREATE DEFAULT SETS
+  // =========================
+
+  const initializeExerciseSets = (
+    workoutExercise,
+    exerciseId
+  ) => {
+    if (performedSets[exerciseId]) {
+      return;
+    }
+
+    const sets = Array.from(
+      {
+        length: workoutExercise.sets || 1,
+      },
+      (_, index) => ({
+        setNumber: index + 1,
+        reps: workoutExercise.reps || 0,
+        weight: workoutExercise.weight || 0,
+        completed: false,
+      })
+    );
+
+    setPerformedSets((previous) => ({
+      ...previous,
+      [exerciseId]: sets,
+    }));
+  };
+
+  // =========================
+  // UPDATE SET VALUE
+  // =========================
+
+  const updateSet = (
+    exerciseId,
+    setIndex,
+    field,
+    value
+  ) => {
+    setPerformedSets((previous) => {
+      const currentSets =
+        previous[exerciseId] || [];
+
+      const updatedSets = currentSets.map(
+        (set, index) => {
+          if (index !== setIndex) {
+            return set;
+          }
+
+          return {
+            ...set,
+            [field]: Number(value),
+          };
+        }
+      );
+
+      return {
+        ...previous,
+        [exerciseId]: updatedSets,
+      };
+    });
+  };
+
+  // =========================
+  // TOGGLE SET COMPLETE
+  // =========================
+
+  const toggleSetComplete = (
+    exerciseId,
+    setIndex
+  ) => {
+    setPerformedSets((previous) => {
+      const currentSets =
+        previous[exerciseId] || [];
+
+      const updatedSets = currentSets.map(
+        (set, index) => {
+          if (index !== setIndex) {
+            return set;
+          }
+
+          return {
+            ...set,
+            completed: !set.completed,
+          };
+        }
+      );
+
+      return {
+        ...previous,
+        [exerciseId]: updatedSets,
+      };
+    });
+  };
+
+  // =========================
+  // FINISH WORKOUT
+  // =========================
+
+  const handleFinishWorkout = async () => {
+    if (!selectedWorkout) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to finish this workout?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const exercises =
+      selectedWorkout.exercises.map(
+        (workoutExercise) => {
+          const exercise =
+            workoutExercise.exercise;
+
+          const exerciseId =
+            typeof exercise === "object"
+              ? exercise?._id
+              : exercise;
+
+          return {
+            exercise: exerciseId,
+            performedSets:
+              performedSets[exerciseId] || [],
+          };
+        }
+      );
+
+    const duration = Math.max(
+      1,
+      Math.round(workoutSeconds / 60)
+    );
+
+    const result = await dispatch(
+      completeWorkout({
+        workoutId: id,
+        workoutData: {
+          duration,
+          exercises,
+        },
+      })
+    );
+
+    if (
+      completeWorkout.fulfilled.match(result)
+    ) {
+      navigate("/progress");
+    }
+  };
+
+  // =========================
   // COMPLETE EXERCISE
   // =========================
 
-  const handleCompleteExercise = (exerciseId) => {
+  const handleCompleteExercise = (
+    exerciseId
+  ) => {
     if (!exerciseId) {
       return;
     }
@@ -84,7 +314,9 @@ const WorkoutDetails = () => {
   // REMOVE EXERCISE
   // =========================
 
-  const handleRemoveExercise = (exerciseId) => {
+  const handleRemoveExercise = (
+    exerciseId
+  ) => {
     if (!exerciseId) {
       return;
     }
@@ -173,11 +405,14 @@ const WorkoutDetails = () => {
       return "Not available";
     }
 
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return new Date(date).toLocaleDateString(
+      "en-IN",
+      {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      }
+    );
   };
 
   const formatText = (value) => {
@@ -187,15 +422,21 @@ const WorkoutDetails = () => {
 
     return value
       .replaceAll("_", " ")
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+      .replace(/\b\w/g, (char) =>
+        char.toUpperCase()
+      );
   };
 
   // =========================
   // CHECK EXERCISE COMPLETION
   // =========================
 
-  const isExerciseCompleted = (workoutExercise) => {
-    return Boolean(workoutExercise.completed);
+  const isExerciseCompleted = (
+    workoutExercise
+  ) => {
+    return Boolean(
+      workoutExercise.completed
+    );
   };
 
   // =========================
@@ -209,6 +450,14 @@ const WorkoutDetails = () => {
     workout.exercises?.filter(
       (exercise) => exercise.completed
     ).length || 0;
+
+  // =========================
+  // COMPLETED WORKOUT
+  // =========================
+
+  if (workout.completed) {
+    // We intentionally still show the details page.
+  }
 
   return (
     <div className="space-y-8">
@@ -253,22 +502,73 @@ const WorkoutDetails = () => {
           )}
         </div>
 
-        {/* Workout Completion */}
+        {/* =========================
+            START / TIMER / COMPLETE
+        ========================= */}
 
-        <div>
+        <div className="flex flex-wrap items-center gap-3">
           {workout.completed ? (
             <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-2 text-sm font-medium text-green-400">
               <CheckCircle2 size={16} />
               Workout Completed
             </div>
+          ) : isWorkoutStarted ? (
+            <>
+              <div className="inline-flex items-center gap-2 rounded-xl bg-zinc-800 px-4 py-2.5 text-sm font-semibold text-white">
+                <Clock
+                  size={17}
+                  className="text-orange-500"
+                />
+
+                {formatTimer(workoutSeconds)}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleFinishWorkout}
+                disabled={completeWorkoutLoading}
+                className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {completeWorkoutLoading ? (
+                  <>
+                    <Loader2
+                      size={17}
+                      className="animate-spin"
+                    />
+                    Finishing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={17} />
+                    Finish Workout
+                  </>
+                )}
+              </button>
+            </>
           ) : (
-            <div className="inline-flex items-center gap-2 rounded-full bg-zinc-800 px-3 py-2 text-sm font-medium text-zinc-400">
-              <Circle size={16} />
-              In Progress
-            </div>
+            <button
+              type="button"
+              onClick={handleStartWorkout}
+              className="inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-orange-400"
+            >
+              <PlayCircle size={18} />
+              Start Workout
+            </button>
           )}
         </div>
       </div>
+
+      {/* =========================
+          COMPLETION ERROR
+      ========================= */}
+
+      {completeWorkoutError && (
+        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4">
+          <p className="text-sm text-red-400">
+            {completeWorkoutError}
+          </p>
+        </div>
+      )}
 
       {/* =========================
           COMPLETION PROGRESS
@@ -282,8 +582,8 @@ const WorkoutDetails = () => {
             </p>
 
             <p className="mt-1 text-xs text-zinc-500">
-              {completedExercises} of {totalExercises}{" "}
-              exercises completed
+              {completedExercises} of{" "}
+              {totalExercises} exercises completed
             </p>
           </div>
 
@@ -354,7 +654,14 @@ const WorkoutDetails = () => {
               </p>
 
               <p className="mt-1 text-lg font-semibold text-white">
-                {workout.duration
+                {isWorkoutStarted
+                  ? `${Math.max(
+                      1,
+                      Math.round(
+                        workoutSeconds / 60
+                      )
+                    )} min`
+                  : workout.duration
                   ? `${workout.duration} min`
                   : "Not set"}
               </p>
@@ -382,7 +689,9 @@ const WorkoutDetails = () => {
               <p className="mt-1 text-lg font-semibold text-white">
                 {workout.completed
                   ? "Completed"
-                  : "In Progress"}
+                  : isWorkoutStarted
+                  ? "Training"
+                  : "Not Started"}
               </p>
             </div>
           </div>
@@ -403,7 +712,9 @@ const WorkoutDetails = () => {
 
               <p className="mt-1 text-sm font-semibold text-white">
                 {workout.completedAt
-                  ? formatDate(workout.completedAt)
+                  ? formatDate(
+                      workout.completedAt
+                    )
                   : "Not completed"}
               </p>
             </div>
@@ -446,7 +757,9 @@ const WorkoutDetails = () => {
           </h2>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Complete each exercise as you finish it
+            {isWorkoutStarted
+              ? "Record your actual performance for every set."
+              : "Start your workout to begin tracking your sets."}
           </p>
         </div>
 
@@ -469,7 +782,8 @@ const WorkoutDetails = () => {
                   workoutExercise.exercise;
 
                 const isExerciseObject =
-                  typeof exercise === "object" &&
+                  typeof exercise ===
+                    "object" &&
                   exercise !== null;
 
                 const exerciseName =
@@ -520,6 +834,11 @@ const WorkoutDetails = () => {
                 const isRemoving =
                   removingExerciseId ===
                   exerciseId;
+
+                const currentSets =
+                  performedSets[
+                    exerciseId
+                  ] || [];
 
                 return (
                   <div
@@ -594,13 +913,9 @@ const WorkoutDetails = () => {
                         </div>
                       </div>
 
-                      {/* =========================
-                          ACTION BUTTONS
-                      ========================= */}
+                      {/* ACTIONS */}
 
                       <div className="flex flex-wrap items-center gap-3">
-                        {/* VIEW EXERCISE */}
-
                         {isExerciseObject &&
                           exercise?._id && (
                             <Link
@@ -614,7 +929,7 @@ const WorkoutDetails = () => {
                             </Link>
                           )}
 
-                        {/* COMPLETE BUTTON */}
+                        {/* OLD COMPLETE EXERCISE */}
 
                         {exerciseCompleted ? (
                           <button
@@ -631,7 +946,8 @@ const WorkoutDetails = () => {
                           <button
                             type="button"
                             disabled={
-                              exerciseCompleteLoading
+                              exerciseCompleteLoading ||
+                              isWorkoutStarted
                             }
                             onClick={() =>
                               handleCompleteExercise(
@@ -659,13 +975,14 @@ const WorkoutDetails = () => {
                           </button>
                         )}
 
-                        {/* REMOVE BUTTON */}
+                        {/* REMOVE */}
 
                         <button
                           type="button"
                           disabled={
                             exerciseRemoveLoading ||
-                            isRemoving
+                            isRemoving ||
+                            isWorkoutStarted
                           }
                           onClick={() =>
                             handleRemoveExercise(
@@ -726,7 +1043,7 @@ const WorkoutDetails = () => {
 
                       <div className="lg:col-span-2">
                         <div className="grid gap-3 sm:grid-cols-2">
-                          {/* Sets */}
+                          {/* SETS */}
 
                           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                             <div className="flex items-center gap-3">
@@ -737,7 +1054,7 @@ const WorkoutDetails = () => {
 
                               <div>
                                 <p className="text-xs text-zinc-600">
-                                  Sets
+                                  Planned Sets
                                 </p>
 
                                 <p className="mt-1 text-lg font-semibold text-white">
@@ -748,7 +1065,7 @@ const WorkoutDetails = () => {
                             </div>
                           </div>
 
-                          {/* Reps */}
+                          {/* REPS */}
 
                           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                             <div className="flex items-center gap-3">
@@ -759,7 +1076,7 @@ const WorkoutDetails = () => {
 
                               <div>
                                 <p className="text-xs text-zinc-600">
-                                  Reps
+                                  Planned Reps
                                 </p>
 
                                 <p className="mt-1 text-lg font-semibold text-white">
@@ -770,7 +1087,7 @@ const WorkoutDetails = () => {
                             </div>
                           </div>
 
-                          {/* Weight */}
+                          {/* WEIGHT */}
 
                           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                             <div className="flex items-center gap-3">
@@ -781,7 +1098,7 @@ const WorkoutDetails = () => {
 
                               <div>
                                 <p className="text-xs text-zinc-600">
-                                  Weight
+                                  Planned Weight
                                 </p>
 
                                 <p className="mt-1 text-lg font-semibold text-white">
@@ -793,7 +1110,7 @@ const WorkoutDetails = () => {
                             </div>
                           </div>
 
-                          {/* Rest */}
+                          {/* REST */}
 
                           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
                             <div className="flex items-center gap-3">
@@ -816,6 +1133,180 @@ const WorkoutDetails = () => {
                             </div>
                           </div>
                         </div>
+
+                        {/* =========================
+                            ACTUAL SET TRACKER
+                        ========================= */}
+
+                        {isWorkoutStarted && (
+                          <div className="mt-6 rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4">
+                            <div className="mb-4 flex items-center justify-between">
+                              <div>
+                                <h4 className="font-semibold text-white">
+                                  Track Sets
+                                </h4>
+
+                                <p className="mt-1 text-xs text-zinc-500">
+                                  Record your actual
+                                  performance.
+                                </p>
+                              </div>
+
+                              {!performedSets[
+                                exerciseId
+                              ] && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    initializeExerciseSets(
+                                      workoutExercise,
+                                      exerciseId
+                                    )
+                                  }
+                                  className="rounded-lg bg-zinc-800 px-3 py-2 text-xs font-medium text-white hover:bg-zinc-700"
+                                >
+                                  Load Sets
+                                </button>
+                              )}
+                            </div>
+
+                            {currentSets.length >
+                              0 && (
+                              <div className="space-y-3">
+                                {currentSets.map(
+                                  (
+                                    set,
+                                    setIndex
+                                  ) => (
+                                    <div
+                                      key={
+                                        set.setNumber
+                                      }
+                                      className={`rounded-xl border p-3 ${
+                                        set.completed
+                                          ? "border-green-500/20 bg-green-500/5"
+                                          : "border-zinc-800 bg-zinc-950"
+                                      }`}
+                                    >
+                                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[70px_1fr_1fr_auto] sm:items-end">
+                                        {/* SET NUMBER */}
+
+                                        <div>
+                                          <p className="text-xs text-zinc-600">
+                                            Set
+                                          </p>
+
+                                          <p className="mt-1 text-lg font-semibold text-white">
+                                            {
+                                              set.setNumber
+                                            }
+                                          </p>
+                                        </div>
+
+                                        {/* REPS */}
+
+                                        <div>
+                                          <label className="text-xs text-zinc-500">
+                                            Reps
+                                          </label>
+
+                                          <input
+                                            type="number"
+                                            min="1"
+                                            value={
+                                              set.reps
+                                            }
+                                            onChange={(
+                                              event
+                                            ) =>
+                                              updateSet(
+                                                exerciseId,
+                                                setIndex,
+                                                "reps",
+                                                event
+                                                  .target
+                                                  .value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                                          />
+                                        </div>
+
+                                        {/* WEIGHT */}
+
+                                        <div>
+                                          <label className="text-xs text-zinc-500">
+                                            Weight
+                                            (kg)
+                                          </label>
+
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="0.5"
+                                            value={
+                                              set.weight
+                                            }
+                                            onChange={(
+                                              event
+                                            ) =>
+                                              updateSet(
+                                                exerciseId,
+                                                setIndex,
+                                                "weight",
+                                                event
+                                                  .target
+                                                  .value
+                                              )
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                                          />
+                                        </div>
+
+                                        {/* COMPLETE SET */}
+
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            toggleSetComplete(
+                                              exerciseId,
+                                              setIndex
+                                            )
+                                          }
+                                          className={`inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                                            set.completed
+                                              ? "bg-green-500/10 text-green-400"
+                                              : "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                                          }`}
+                                        >
+                                          {set.completed ? (
+                                            <>
+                                              <CheckCircle2
+                                                size={
+                                                  16
+                                                }
+                                              />
+                                              Done
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Circle
+                                                size={
+                                                  16
+                                                }
+                                              />
+                                              Complete
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* VIDEO */}
 
@@ -861,6 +1352,51 @@ const WorkoutDetails = () => {
           </div>
         )}
       </div>
+
+      {/* =========================
+          FINISH WORKOUT FOOTER
+      ========================= */}
+
+      {isWorkoutStarted &&
+        !workout.completed &&
+        totalExercises > 0 && (
+          <div className="sticky bottom-4 z-20 rounded-2xl border border-zinc-800 bg-zinc-950/95 p-4 shadow-2xl backdrop-blur">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-white">
+                  Workout in progress
+                </p>
+
+                <p className="mt-1 text-xs text-zinc-500">
+                  {formatTimer(workoutSeconds)}{" "}
+                  • Record your sets before finishing.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleFinishWorkout}
+                disabled={completeWorkoutLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-6 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {completeWorkoutLoading ? (
+                  <>
+                    <Loader2
+                      size={18}
+                      className="animate-spin"
+                    />
+                    Finishing Workout...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} />
+                    Finish Workout
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
     </div>
   );
 };

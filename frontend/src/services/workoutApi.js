@@ -105,6 +105,11 @@ export const completeWorkoutExercise = (
   );
 };
 
+// PROGRESS DASHBOARD
+export const getProgressDashboard = () => {
+  return api.get("/workouts/progress/dashboard");
+};
+
 // =========================
 // REMOVE EXERCISE FROM WORKOUT
 // =========================

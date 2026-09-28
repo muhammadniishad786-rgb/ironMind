@@ -6,8 +6,10 @@ import {
   createWorkout as createWorkoutApi,
   updateWorkout as updateWorkoutApi,
   deleteWorkout as deleteWorkoutApi,
+  completeWorkout as completeWorkoutApi,
   completeWorkoutExercise as completeWorkoutExerciseApi,
   removeWorkoutExercise as removeWorkoutExerciseApi,
+  getProgressDashboard as getProgressDashboardApi,
 } from "../../services/workoutApi";
 
 // =========================
@@ -25,10 +27,10 @@ export const getWorkouts = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Failed to fetch workouts"
+          "Failed to fetch workouts",
       );
     }
-  }
+  },
 );
 
 // =========================
@@ -47,10 +49,10 @@ export const getWorkoutById = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Failed to fetch workout"
+          "Failed to fetch workout",
       );
     }
-  }
+  },
 );
 
 // =========================
@@ -69,10 +71,10 @@ export const createWorkout = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Failed to create workout"
+          "Failed to create workout",
       );
     }
-  }
+  },
 );
 
 // =========================
@@ -84,23 +86,23 @@ export const updateWorkout = createAsyncThunk(
 
   async (
     { workoutId, workoutData },
-    { rejectWithValue }
+    { rejectWithValue },
   ) => {
     try {
       const response =
         await updateWorkoutApi(
           workoutId,
-          workoutData
+          workoutData,
         );
 
       return response.data;
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Failed to update workout"
+          "Failed to update workout",
       );
     }
-  }
+  },
 );
 
 // =========================
@@ -122,10 +124,38 @@ export const deleteWorkout = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(
         error.response?.data?.message ||
-          "Failed to delete workout"
+          "Failed to delete workout",
       );
     }
-  }
+  },
+);
+
+// =========================
+// COMPLETE WORKOUT
+// =========================
+
+export const completeWorkout = createAsyncThunk(
+  "workout/completeWorkout",
+
+  async (
+    { workoutId, workoutData },
+    { rejectWithValue },
+  ) => {
+    try {
+      const response =
+        await completeWorkoutApi(
+          workoutId,
+          workoutData,
+        );
+
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message ||
+          "Failed to complete workout",
+      );
+    }
+  },
 );
 
 // =========================
@@ -138,23 +168,46 @@ export const completeWorkoutExercise =
 
     async (
       { workoutId, exerciseId },
-      { rejectWithValue }
+      { rejectWithValue },
     ) => {
       try {
         const response =
           await completeWorkoutExerciseApi(
             workoutId,
-            exerciseId
+            exerciseId,
           );
 
         return response.data;
       } catch (error) {
         return rejectWithValue(
           error.response?.data?.message ||
-            "Failed to complete exercise"
+            "Failed to complete exercise",
         );
       }
-    }
+    },
+  );
+
+// =========================
+// PROGRESS DASHBOARD
+// =========================
+
+export const getProgressDashboard =
+  createAsyncThunk(
+    "workout/getProgressDashboard",
+
+    async (_, { rejectWithValue }) => {
+      try {
+        const response =
+          await getProgressDashboardApi();
+
+        return response.data;
+      } catch (error) {
+        return rejectWithValue(
+          error.response?.data?.message ||
+            "Failed to fetch progress dashboard",
+        );
+      }
+    },
   );
 
 // =========================
@@ -167,23 +220,23 @@ export const removeWorkoutExercise =
 
     async (
       { workoutId, exerciseId },
-      { rejectWithValue }
+      { rejectWithValue },
     ) => {
       try {
         const response =
           await removeWorkoutExerciseApi(
             workoutId,
-            exerciseId
+            exerciseId,
           );
 
         return response.data;
       } catch (error) {
         return rejectWithValue(
           error.response?.data?.message ||
-            "Failed to remove exercise"
+            "Failed to remove exercise",
         );
       }
-    }
+    },
   );
 
 // =========================
@@ -218,9 +271,18 @@ const initialState = {
   deleteLoading: false,
   deleteError: null,
 
+  // Complete workout
+  completeWorkoutLoading: false,
+  completeWorkoutError: null,
+
   // Complete exercise
   exerciseCompleteLoading: false,
   exerciseCompleteError: null,
+
+  // Progress dashboard
+  progressDashboard: null,
+  progressDashboardLoading: false,
+  progressDashboardError: null,
 
   // Remove exercise
   exerciseRemoveLoading: false,
@@ -247,8 +309,10 @@ const workoutSlice = createSlice({
       state.detailsError = null;
       state.updateError = null;
       state.deleteError = null;
+      state.completeWorkoutError = null;
       state.exerciseCompleteError = null;
       state.exerciseRemoveError = null;
+      state.progressDashboardError = null;
     },
 
     // =========================
@@ -279,6 +343,8 @@ const workoutSlice = createSlice({
       state.exerciseCompleteError = null;
 
       state.exerciseRemoveError = null;
+
+      state.completeWorkoutError = null;
     },
   },
 
@@ -294,7 +360,7 @@ const workoutSlice = createSlice({
         (state) => {
           state.loading = true;
           state.error = null;
-        }
+        },
       )
 
       .addCase(
@@ -306,7 +372,7 @@ const workoutSlice = createSlice({
             action.payload.workouts;
 
           state.error = null;
-        }
+        },
       )
 
       .addCase(
@@ -314,7 +380,7 @@ const workoutSlice = createSlice({
         (state, action) => {
           state.loading = false;
           state.error = action.payload;
-        }
+        },
       )
 
       // =========================
@@ -329,7 +395,7 @@ const workoutSlice = createSlice({
           state.detailsError = null;
 
           state.selectedWorkout = null;
-        }
+        },
       )
 
       .addCase(
@@ -341,7 +407,7 @@ const workoutSlice = createSlice({
 
           state.selectedWorkout =
             action.payload.workout;
-        }
+        },
       )
 
       .addCase(
@@ -350,7 +416,7 @@ const workoutSlice = createSlice({
           state.detailsLoading = false;
 
           state.detailsError = action.payload;
-        }
+        },
       )
 
       // =========================
@@ -365,7 +431,7 @@ const workoutSlice = createSlice({
           state.createError = null;
 
           state.createSuccess = false;
-        }
+        },
       )
 
       .addCase(
@@ -377,13 +443,10 @@ const workoutSlice = createSlice({
 
           state.createError = null;
 
-          // Add newly created workout
-          // to existing workout list
-
           state.workouts.unshift(
-            action.payload.workout
+            action.payload.workout,
           );
-        }
+        },
       )
 
       .addCase(
@@ -393,8 +456,9 @@ const workoutSlice = createSlice({
 
           state.createSuccess = false;
 
-          state.createError = action.payload;
-        }
+          state.createError =
+            action.payload;
+        },
       )
 
       // =========================
@@ -409,7 +473,7 @@ const workoutSlice = createSlice({
           state.updateError = null;
 
           state.updateSuccess = false;
-        }
+        },
       )
 
       .addCase(
@@ -424,13 +488,11 @@ const workoutSlice = createSlice({
           const updatedWorkout =
             action.payload.workout;
 
-          // Update workout in list
-
           const index =
             state.workouts.findIndex(
               (workout) =>
                 workout._id ===
-                updatedWorkout._id
+                updatedWorkout._id,
             );
 
           if (index !== -1) {
@@ -438,12 +500,9 @@ const workoutSlice = createSlice({
               updatedWorkout;
           }
 
-          // Update selected workout
-          // if currently open
-
           state.selectedWorkout =
             updatedWorkout;
-        }
+        },
       )
 
       .addCase(
@@ -453,8 +512,9 @@ const workoutSlice = createSlice({
 
           state.updateSuccess = false;
 
-          state.updateError = action.payload;
-        }
+          state.updateError =
+            action.payload;
+        },
       )
 
       // =========================
@@ -467,7 +527,7 @@ const workoutSlice = createSlice({
           state.deleteLoading = true;
 
           state.deleteError = null;
-        }
+        },
       )
 
       .addCase(
@@ -481,11 +541,8 @@ const workoutSlice = createSlice({
             state.workouts.filter(
               (workout) =>
                 workout._id !==
-                action.payload.workoutId
+                action.payload.workoutId,
             );
-
-          // Clear selected workout
-          // if it was deleted
 
           if (
             state.selectedWorkout?._id ===
@@ -493,7 +550,7 @@ const workoutSlice = createSlice({
           ) {
             state.selectedWorkout = null;
           }
-        }
+        },
       )
 
       .addCase(
@@ -503,7 +560,68 @@ const workoutSlice = createSlice({
 
           state.deleteError =
             action.payload;
-        }
+        },
+      )
+
+      // =========================
+      // COMPLETE WORKOUT
+      // =========================
+
+      .addCase(
+        completeWorkout.pending,
+        (state) => {
+          state.completeWorkoutLoading =
+            true;
+
+          state.completeWorkoutError =
+            null;
+        },
+      )
+
+      .addCase(
+        completeWorkout.fulfilled,
+        (state, action) => {
+          state.completeWorkoutLoading =
+            false;
+
+          state.completeWorkoutError =
+            null;
+
+          const completedWorkout =
+            action.payload.workout;
+
+          // Update selected workout
+          state.selectedWorkout =
+            completedWorkout;
+
+          // Update workout list
+          const index =
+            state.workouts.findIndex(
+              (workout) =>
+                workout._id ===
+                completedWorkout._id,
+            );
+
+          if (index !== -1) {
+            state.workouts[index] =
+              completedWorkout;
+          }
+
+          // Progress data may now be outdated.
+          // Force Progress page to fetch fresh data.
+          state.progressDashboard = null;
+        },
+      )
+
+      .addCase(
+        completeWorkout.rejected,
+        (state, action) => {
+          state.completeWorkoutLoading =
+            false;
+
+          state.completeWorkoutError =
+            action.payload;
+        },
       )
 
       // =========================
@@ -513,51 +631,92 @@ const workoutSlice = createSlice({
       .addCase(
         completeWorkoutExercise.pending,
         (state) => {
-          state.exerciseCompleteLoading = true;
+          state.exerciseCompleteLoading =
+            true;
 
-          state.exerciseCompleteError = null;
-        }
+          state.exerciseCompleteError =
+            null;
+        },
       )
 
       .addCase(
         completeWorkoutExercise.fulfilled,
         (state, action) => {
-          state.exerciseCompleteLoading = false;
+          state.exerciseCompleteLoading =
+            false;
 
-          state.exerciseCompleteError = null;
+          state.exerciseCompleteError =
+            null;
 
           const updatedWorkout =
             action.payload.workout;
 
-          // Update selected workout
-
           state.selectedWorkout =
             updatedWorkout;
-
-          // Update workout in list
 
           const index =
             state.workouts.findIndex(
               (workout) =>
                 workout._id ===
-                updatedWorkout._id
+                updatedWorkout._id,
             );
 
           if (index !== -1) {
             state.workouts[index] =
               updatedWorkout;
           }
-        }
+        },
       )
 
       .addCase(
         completeWorkoutExercise.rejected,
         (state, action) => {
-          state.exerciseCompleteLoading = false;
+          state.exerciseCompleteLoading =
+            false;
 
           state.exerciseCompleteError =
             action.payload;
-        }
+        },
+      )
+
+      // =========================
+      // PROGRESS DASHBOARD
+      // =========================
+
+      .addCase(
+        getProgressDashboard.pending,
+        (state) => {
+          state.progressDashboardLoading =
+            true;
+
+          state.progressDashboardError =
+            null;
+        },
+      )
+
+      .addCase(
+        getProgressDashboard.fulfilled,
+        (state, action) => {
+          state.progressDashboardLoading =
+            false;
+
+          state.progressDashboardError =
+            null;
+
+          state.progressDashboard =
+            action.payload;
+        },
+      )
+
+      .addCase(
+        getProgressDashboard.rejected,
+        (state, action) => {
+          state.progressDashboardLoading =
+            false;
+
+          state.progressDashboardError =
+            action.payload;
+        },
       )
 
       // =========================
@@ -567,51 +726,52 @@ const workoutSlice = createSlice({
       .addCase(
         removeWorkoutExercise.pending,
         (state) => {
-          state.exerciseRemoveLoading = true;
+          state.exerciseRemoveLoading =
+            true;
 
-          state.exerciseRemoveError = null;
-        }
+          state.exerciseRemoveError =
+            null;
+        },
       )
 
       .addCase(
         removeWorkoutExercise.fulfilled,
         (state, action) => {
-          state.exerciseRemoveLoading = false;
+          state.exerciseRemoveLoading =
+            false;
 
-          state.exerciseRemoveError = null;
+          state.exerciseRemoveError =
+            null;
 
           const updatedWorkout =
             action.payload.workout;
 
-          // Update selected workout
-
           state.selectedWorkout =
             updatedWorkout;
-
-          // Update workout in list
 
           const index =
             state.workouts.findIndex(
               (workout) =>
                 workout._id ===
-                updatedWorkout._id
+                updatedWorkout._id,
             );
 
           if (index !== -1) {
             state.workouts[index] =
               updatedWorkout;
           }
-        }
+        },
       )
 
       .addCase(
         removeWorkoutExercise.rejected,
         (state, action) => {
-          state.exerciseRemoveLoading = false;
+          state.exerciseRemoveLoading =
+            false;
 
           state.exerciseRemoveError =
             action.payload;
-        }
+        },
       );
   },
 });

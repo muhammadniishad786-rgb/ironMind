@@ -33,6 +33,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       icon: ChartNoAxesCombined,
     },
     {
+        name: "Exercises",
+        path: "/exercises",
+        icon: Dumbbell
+    },
+    {
       name: "Profile",
       path: "/profile",
       icon: User,

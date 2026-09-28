@@ -1,20 +1,35 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { Link } from "react-router-dom";
+
 import {
   Plus,
   X,
   Dumbbell,
   Trash2,
+  Pencil,
   Loader2,
+  ArrowRight,
 } from "lucide-react";
 
 import {
   getWorkouts,
   createWorkout,
+  updateWorkout,
+  deleteWorkout,
   clearCreateSuccess,
+  clearUpdateSuccess,
 } from "../../store/slices/workoutSlice";
 
 import { getExercises } from "../../store/slices/exerciseSlice";
+
+const initialExercise = {
+  exercise: "",
+  sets: 3,
+  reps: 10,
+  weight: 0,
+  restTime: 60,
+};
 
 const Workouts = () => {
   const dispatch = useDispatch();
@@ -27,9 +42,17 @@ const Workouts = () => {
     workouts,
     loading,
     error,
+
     createLoading,
     createError,
     createSuccess,
+
+    updateLoading,
+    updateError,
+    updateSuccess,
+
+    deleteLoading,
+    deleteError,
   } = useSelector((state) => state.workout);
 
   const {
@@ -44,19 +67,16 @@ const Workouts = () => {
 
   const [showForm, setShowForm] = useState(false);
 
+  const [editingWorkout, setEditingWorkout] =
+    useState(null);
+
   const [name, setName] = useState("");
 
-  const [description, setDescription] = useState("");
+  const [description, setDescription] =
+    useState("");
 
-  const [workoutExercises, setWorkoutExercises] = useState([
-    {
-      exercise: "",
-      sets: 3,
-      reps: 10,
-      weight: 0,
-      restTime: 60,
-    },
-  ]);
+  const [workoutExercises, setWorkoutExercises] =
+    useState([initialExercise]);
 
   // =========================
   // FETCH DATA
@@ -68,29 +88,113 @@ const Workouts = () => {
   }, [dispatch]);
 
   // =========================
-  // CLOSE FORM AFTER SUCCESS
+  // RESET FORM
+  // =========================
+
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingWorkout(null);
+
+    setName("");
+    setDescription("");
+
+    setWorkoutExercises([
+      {
+        ...initialExercise,
+      },
+    ]);
+  };
+
+  // =========================
+  // CREATE SUCCESS
   // =========================
 
   useEffect(() => {
     if (createSuccess) {
-      setShowForm(false);
-
-      setName("");
-      setDescription("");
-
-      setWorkoutExercises([
-        {
-          exercise: "",
-          sets: 3,
-          reps: 10,
-          weight: 0,
-          restTime: 60,
-        },
-      ]);
+      resetForm();
 
       dispatch(clearCreateSuccess());
     }
   }, [createSuccess, dispatch]);
+
+  // =========================
+  // UPDATE SUCCESS
+  // =========================
+
+  useEffect(() => {
+    if (updateSuccess) {
+      resetForm();
+
+      dispatch(clearUpdateSuccess());
+    }
+  }, [updateSuccess, dispatch]);
+
+  // =========================
+  // OPEN CREATE FORM
+  // =========================
+
+  const openCreateForm = () => {
+    setEditingWorkout(null);
+
+    setName("");
+    setDescription("");
+
+    setWorkoutExercises([
+      {
+        ...initialExercise,
+      },
+    ]);
+
+    setShowForm(true);
+  };
+
+  // =========================
+  // OPEN EDIT FORM
+  // =========================
+
+  const openEditForm = (workout) => {
+    setEditingWorkout(workout);
+
+    setName(workout.name || "");
+
+    setDescription(
+      workout.description || ""
+    );
+
+    setWorkoutExercises(
+      workout.exercises?.length
+        ? workout.exercises.map((item) => ({
+            exercise:
+              item.exercise?._id ||
+              item.exercise ||
+              "",
+            sets: item.sets ?? 3,
+            reps: item.reps ?? 10,
+            weight: item.weight ?? 0,
+            restTime: item.restTime ?? 60,
+          }))
+        : [
+            {
+              ...initialExercise,
+            },
+          ]
+    );
+
+    setShowForm(true);
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  // =========================
+  // CLOSE FORM
+  // =========================
+
+  const closeForm = () => {
+    resetForm();
+  };
 
   // =========================
   // ADD EXERCISE
@@ -100,11 +204,7 @@ const Workouts = () => {
     setWorkoutExercises((prev) => [
       ...prev,
       {
-        exercise: "",
-        sets: 3,
-        reps: 10,
-        weight: 0,
-        restTime: 60,
+        ...initialExercise,
       },
     ]);
   };
@@ -144,7 +244,7 @@ const Workouts = () => {
   };
 
   // =========================
-  // CREATE WORKOUT
+  // SUBMIT
   // =========================
 
   const handleSubmit = (e) => {
@@ -154,31 +254,51 @@ const Workouts = () => {
       name,
       description,
 
-      exercises: workoutExercises.map((item) => ({
-        exercise: item.exercise,
-        sets: item.sets,
-        reps: item.reps,
-        weight: item.weight,
-        restTime: item.restTime,
-      })),
+      exercises: workoutExercises.map(
+        (item) => ({
+          exercise: item.exercise,
+          sets: item.sets,
+          reps: item.reps,
+          weight: item.weight,
+          restTime: item.restTime,
+        })
+      ),
     };
 
-    dispatch(createWorkout(workoutData));
+    if (editingWorkout) {
+      dispatch(
+        updateWorkout({
+          workoutId: editingWorkout._id,
+          workoutData,
+        })
+      );
+    } else {
+      dispatch(createWorkout(workoutData));
+    }
   };
 
   // =========================
-  // UI
+  // DELETE
   // =========================
+
+  const handleDelete = (workoutId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this workout?"
+    );
+
+    if (!confirmed) return;
+
+    dispatch(deleteWorkout(workoutId));
+  };
 
   return (
     <div className="space-y-8">
 
       {/* =========================
           HEADER
-      ========================== */}
+      ========================= */}
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-
         <div>
           <h1 className="text-2xl font-bold text-white">
             Workouts
@@ -190,18 +310,17 @@ const Workouts = () => {
         </div>
 
         <button
-          onClick={() => setShowForm(true)}
+          onClick={openCreateForm}
           className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400"
         >
           <Plus size={18} />
           New Workout
         </button>
-
       </div>
 
       {/* =========================
-          CREATE WORKOUT FORM
-      ========================== */}
+          FORM
+      ========================= */}
 
       {showForm && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
@@ -209,46 +328,50 @@ const Workouts = () => {
           {/* FORM HEADER */}
 
           <div className="mb-6 flex items-center justify-between">
-
             <div>
               <h2 className="text-lg font-semibold text-white">
-                Create Workout
+                {editingWorkout
+                  ? "Edit Workout"
+                  : "Create Workout"}
               </h2>
 
               <p className="mt-1 text-sm text-zinc-500">
-                Build your workout routine.
+                {editingWorkout
+                  ? "Update your workout routine."
+                  : "Build your workout routine."}
               </p>
             </div>
 
             <button
-              onClick={() => setShowForm(false)}
+              onClick={closeForm}
               className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
             >
               <X size={20} />
             </button>
-
           </div>
 
           {/* ERRORS */}
 
-          {createError && (
+          {(createError ||
+            updateError ||
+            deleteError ||
+            exercisesError) && (
             <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-              {createError}
+              {createError ||
+                updateError ||
+                deleteError ||
+                exercisesError}
             </div>
           )}
 
-          {exercisesError && (
-            <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-              {exercisesError}
-            </div>
-          )}
+          {/* FORM */}
 
           <form
             onSubmit={handleSubmit}
             className="space-y-6"
           >
 
-            {/* WORKOUT NAME */}
+            {/* NAME */}
 
             <div>
               <label className="mb-2 block text-sm font-medium text-zinc-300">
@@ -277,7 +400,9 @@ const Workouts = () => {
               <textarea
                 value={description}
                 onChange={(e) =>
-                  setDescription(e.target.value)
+                  setDescription(
+                    e.target.value
+                  )
                 }
                 placeholder="e.g. Chest, shoulders and triceps"
                 rows={3}
@@ -290,7 +415,6 @@ const Workouts = () => {
             <div>
 
               <div className="mb-3 flex items-center justify-between">
-
                 <label className="text-sm font-medium text-zinc-300">
                   Exercises
                 </label>
@@ -303,7 +427,6 @@ const Workouts = () => {
                   <Plus size={16} />
                   Add Exercise
                 </button>
-
               </div>
 
               <div className="space-y-4">
@@ -320,7 +443,6 @@ const Workouts = () => {
                       <div className="mb-4 flex items-center justify-between">
 
                         <div className="flex items-center gap-2">
-
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
                             <Dumbbell size={16} />
                           </div>
@@ -328,7 +450,6 @@ const Workouts = () => {
                           <span className="text-sm font-medium text-white">
                             Exercise {index + 1}
                           </span>
-
                         </div>
 
                         {workoutExercises.length >
@@ -351,7 +472,6 @@ const Workouts = () => {
                       {/* EXERCISE SELECT */}
 
                       <div className="mb-4">
-
                         <label className="mb-2 block text-xs font-medium text-zinc-500">
                           Exercise
                         </label>
@@ -366,10 +486,11 @@ const Workouts = () => {
                             )
                           }
                           required
-                          disabled={exercisesLoading}
+                          disabled={
+                            exercisesLoading
+                          }
                           className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm text-white outline-none focus:border-orange-500"
                         >
-
                           <option value="">
                             {exercisesLoading
                               ? "Loading exercises..."
@@ -380,16 +501,18 @@ const Workouts = () => {
                             (exercise) => (
                               <option
                                 key={exercise._id}
-                                value={exercise._id}
+                                value={
+                                  exercise._id
+                                }
                               >
                                 {exercise.name} —{" "}
-                                {exercise.muscleGroup}
+                                {
+                                  exercise.muscleGroup
+                                }
                               </option>
                             )
                           )}
-
                         </select>
-
                       </div>
 
                       {/* SETS / REPS / WEIGHT / REST */}
@@ -487,13 +610,11 @@ const Workouts = () => {
                         </div>
 
                       </div>
-
                     </div>
                   )
                 )}
 
               </div>
-
             </div>
 
             {/* FORM BUTTONS */}
@@ -502,7 +623,7 @@ const Workouts = () => {
 
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={closeForm}
                 className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-medium text-zinc-300 transition hover:bg-zinc-800"
               >
                 Cancel
@@ -510,11 +631,15 @@ const Workouts = () => {
 
               <button
                 type="submit"
-                disabled={createLoading}
+                disabled={
+                  createLoading ||
+                  updateLoading
+                }
                 className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
 
-                {createLoading && (
+                {(createLoading ||
+                  updateLoading) && (
                   <Loader2
                     size={17}
                     className="animate-spin"
@@ -523,6 +648,10 @@ const Workouts = () => {
 
                 {createLoading
                   ? "Creating..."
+                  : updateLoading
+                  ? "Updating..."
+                  : editingWorkout
+                  ? "Update Workout"
                   : "Create Workout"}
 
               </button>
@@ -530,25 +659,29 @@ const Workouts = () => {
             </div>
 
           </form>
-
         </div>
       )}
 
       {/* =========================
-          LOADING WORKOUTS
-      ========================== */}
+          LOADING
+      ========================= */}
 
       {loading && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <p className="text-sm text-zinc-500">
+          <Loader2
+            size={24}
+            className="mx-auto animate-spin text-orange-500"
+          />
+
+          <p className="mt-3 text-sm text-zinc-500">
             Loading workouts...
           </p>
         </div>
       )}
 
       {/* =========================
-          WORKOUT ERROR
-      ========================== */}
+          ERROR
+      ========================= */}
 
       {error && (
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
@@ -560,7 +693,7 @@ const Workouts = () => {
 
       {/* =========================
           WORKOUT LIST
-      ========================== */}
+      ========================= */}
 
       {!loading && !error && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -577,7 +710,8 @@ const Workouts = () => {
               </h2>
 
               <p className="mt-1 text-sm text-zinc-500">
-                Create your first workout to get started.
+                Create your first workout to
+                get started.
               </p>
 
             </div>
@@ -585,27 +719,108 @@ const Workouts = () => {
             workouts.map((workout) => (
               <div
                 key={workout._id}
-                className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition hover:border-zinc-700"
+                className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition hover:border-orange-500/40 hover:bg-zinc-[950]"
               >
 
-                <h2 className="text-lg font-semibold text-white">
-                  {workout.name}
-                </h2>
+                {/* =========================
+                    CLICKABLE WORKOUT CONTENT
+                ========================= */}
 
-                <p className="mt-2 text-sm leading-6 text-zinc-500">
-                  {workout.description ||
-                    "No description"}
-                </p>
+                <Link
+                  to={`/workouts/${workout._id}`}
+                  className="block"
+                >
 
-                <div className="mt-5 flex items-center justify-between border-t border-zinc-800 pt-4">
+                  <div className="flex items-start gap-3">
 
-                  <span className="text-sm text-zinc-500">
-                    Exercises
-                  </span>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500">
+                      <Dumbbell size={21} />
+                    </div>
 
-                  <span className="rounded-lg bg-orange-500/10 px-2.5 py-1 text-sm font-semibold text-orange-500">
-                    {workout.exercises?.length || 0}
-                  </span>
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-white transition group-hover:text-orange-400">
+                        {workout.name}
+                      </h2>
+
+                      <p className="mt-1 line-clamp-2 text-sm text-zinc-500">
+                        {workout.description ||
+                          "No description"}
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* EXERCISE COUNT */}
+
+                  <div className="mt-5 flex items-center justify-between border-t border-zinc-800 pt-4">
+
+                    <span className="text-sm text-zinc-500">
+                      Exercises
+                    </span>
+
+                    <span className="rounded-lg bg-orange-500/10 px-2.5 py-1 text-sm font-semibold text-orange-500">
+                      {workout.exercises
+                        ?.length || 0}
+                    </span>
+
+                  </div>
+
+                  {/* VIEW DETAILS */}
+
+                  <div className="mt-4 flex items-center justify-between">
+
+                    <span className="text-xs font-medium text-zinc-500 transition group-hover:text-orange-500">
+                      View workout details
+                    </span>
+
+                    <ArrowRight
+                      size={16}
+                      className="text-zinc-600 transition group-hover:translate-x-1 group-hover:text-orange-500"
+                    />
+
+                  </div>
+
+                </Link>
+
+                {/* =========================
+                    EDIT / DELETE
+                ========================= */}
+
+                <div className="mt-4 flex items-center justify-end gap-1 border-t border-zinc-800 pt-3">
+
+                  {/* EDIT */}
+
+                  <button
+                    onClick={() =>
+                      openEditForm(workout)
+                    }
+                    className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-800 hover:text-white"
+                    title="Edit workout"
+                  >
+                    <Pencil size={16} />
+                  </button>
+
+                  {/* DELETE */}
+
+                  <button
+                    onClick={() =>
+                      handleDelete(
+                        workout._id
+                      )
+                    }
+                    disabled={deleteLoading}
+                    className="rounded-lg p-2 text-zinc-500 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-50"
+                    title="Delete workout"
+                  >
+                    {deleteLoading ? (
+                      <Loader2
+                        size={16}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </button>
 
                 </div>
 

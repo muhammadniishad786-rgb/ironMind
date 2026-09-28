@@ -637,3 +637,50 @@ export const getExerciseProgression = async (req, res) => {
     });
   }
 };
+
+// Mark individual exercise as completed
+export const completeWorkoutExercise = async (req, res) => {
+  try {
+    const { workoutId, exerciseId } = req.params;
+
+    const workout = await Workout.findOne({
+      _id: workoutId,
+      user: req.user.userId,
+    });
+
+    if (!workout) {
+      return res.status(404).json({
+        message: "Workout not found",
+      });
+    }
+
+    const workoutExercise = workout.exercises.find(
+      (item) =>
+        item.exercise.toString() === exerciseId
+    );
+
+    if (!workoutExercise) {
+      return res.status(404).json({
+        message: "Exercise not found in this workout",
+      });
+    }
+
+    workoutExercise.completed = true;
+
+    await workout.save();
+
+    const populatedWorkout = await workout.populate(
+      "exercises.exercise"
+    );
+
+    res.status(200).json({
+      message: "Exercise completed successfully",
+      workout: populatedWorkout,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to complete exercise",
+      error: error.message,
+    });
+  }
+};

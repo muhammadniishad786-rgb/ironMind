@@ -12,6 +12,7 @@ import {
   getWeeklyProgress,
   getPersonalRecords,
   getExerciseProgression,
+  completeWorkoutExercise,
 } from "../controllers/workoutController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -53,5 +54,10 @@ router.delete("/:id", authMiddleware, deleteWorkout);
 
 // Complete workout
 router.patch("/:id/complete", authMiddleware, completeWorkout);
+
+router.patch(
+  "/:workoutId/exercises/:exerciseId/complete",
+  completeWorkoutExercise
+);
 
 export default router;

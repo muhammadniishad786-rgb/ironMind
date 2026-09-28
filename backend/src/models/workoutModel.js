@@ -27,7 +27,7 @@ const workoutSetSchema = new mongoose.Schema(
   },
   {
     _id: false,
-  }
+  },
 );
 
 const workoutExerciseSchema = new mongoose.Schema(
@@ -68,10 +68,16 @@ const workoutExerciseSchema = new mongoose.Schema(
       type: [workoutSetSchema],
       default: [],
     },
+
+    // Exercise completion
+    completed: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     _id: false,
-  }
+  },
 );
 
 const workoutSchema = new mongoose.Schema(
@@ -95,13 +101,7 @@ const workoutSchema = new mongoose.Schema(
 
     exercises: {
       type: [workoutExerciseSchema],
-      required: true,
-      validate: {
-        validator: function (value) {
-          return value.length > 0;
-        },
-        message: "Workout must contain at least one exercise",
-      },
+      default: [],
     },
 
     duration: {
@@ -122,7 +122,7 @@ const workoutSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const Workout = mongoose.model("Workout", workoutSchema);

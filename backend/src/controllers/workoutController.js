@@ -486,3 +486,154 @@ export const getWeeklyProgress = async (req, res) => {
     });
   }
 };
+
+// to get personal records
+export const getPersonalRecords = async (req, res) => {
+  try {
+    const workouts = await Workout.find({
+      user: req.user.userId,
+      completed: true,
+    }).populate("exercises.exercise");
+
+    const personalRecords = {};
+
+    workouts.forEach((workout) => {
+      workout.exercises.forEach((workoutExercise) => {
+        const exercise = workoutExercise.exercise;
+
+        if (!exercise) {
+          return;
+        }
+
+        const exerciseId = exercise._id.toString();
+        const exerciseName = exercise.name;
+
+        if (!personalRecords[exerciseId]) {
+          personalRecords[exerciseId] = {
+            exerciseId: exercise._id,
+            exerciseName,
+            muscleGroup: exercise.muscleGroup,
+            maxWeight: 0,
+            maxWeightReps: 0,
+            totalVolume: 0,
+            achievedAt: null,
+          };
+        }
+
+        workoutExercise.performedSets.forEach((set) => {
+          if (!set.completed) {
+            return;
+          }
+
+          const weight = set.weight || 0;
+          const reps = set.reps || 0;
+          const volume = weight * reps;
+
+          // Total volume
+          personalRecords[exerciseId].totalVolume += volume;
+
+          // Personal record
+          if (weight > personalRecords[exerciseId].maxWeight) {
+            personalRecords[exerciseId].maxWeight = weight;
+            personalRecords[exerciseId].maxWeightReps = reps;
+            personalRecords[exerciseId].achievedAt =
+              workout.completedAt;
+          }
+        });
+      });
+    });
+
+    res.status(200).json({
+      personalRecords: Object.values(personalRecords),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to get personal records",
+      error: error.message,
+    });
+  }
+};
+
+// to get exerciseProgress
+export const getExerciseProgression = async (req, res) => {
+  try {
+    const { exerciseId } = req.params;
+
+    const workouts = await Workout.find({
+      user: req.user.userId,
+      completed: true,
+      "exercises.exercise": exerciseId,
+    })
+      .populate("exercises.exercise")
+      .sort({ completedAt: 1 });
+
+    if (workouts.length === 0) {
+      return res.status(404).json({
+        message: "No progression data found for this exercise",
+      });
+    }
+
+    let exerciseName = "";
+    let muscleGroup = "";
+
+    const progress = [];
+
+    workouts.forEach((workout) => {
+      const workoutExercise = workout.exercises.find(
+        (item) =>
+          item.exercise &&
+          item.exercise._id.toString() === exerciseId
+      );
+
+      if (!workoutExercise) {
+        return;
+      }
+
+      exerciseName = workoutExercise.exercise.name;
+      muscleGroup = workoutExercise.exercise.muscleGroup;
+
+      let maxWeight = 0;
+      let totalReps = 0;
+      let totalVolume = 0;
+
+      workoutExercise.performedSets.forEach((set) => {
+        if (!set.completed) {
+          return;
+        }
+
+        const weight = set.weight || 0;
+        const reps = set.reps || 0;
+
+        totalReps += reps;
+        totalVolume += weight * reps;
+
+        if (weight > maxWeight) {
+          maxWeight = weight;
+        }
+      });
+
+      progress.push({
+        workoutId: workout._id,
+        workoutName: workout.name,
+        date: workout.completedAt,
+        maxWeight,
+        totalReps,
+        totalVolume,
+      });
+    });
+
+    res.status(200).json({
+      exercise: {
+        exerciseId,
+        name: exerciseName,
+        muscleGroup,
+      },
+      progress,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to get exercise progression",
+      error: error.message,
+    });
+  }
+};

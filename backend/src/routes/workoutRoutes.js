@@ -10,6 +10,8 @@ import {
   getWorkoutHistory,
   getWorkoutProgress,
   getWeeklyProgress,
+  getPersonalRecords,
+  getExerciseProgression,
 } from "../controllers/workoutController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
@@ -27,8 +29,18 @@ router.get("/history", authMiddleware, getWorkoutHistory);
 // workout progress
 router.get("/progress", authMiddleware, getWorkoutProgress);
 
+// to get personal records
+router.get("/progress/pr", authMiddleware, getPersonalRecords);
+
 // get weekly progress
 router.get("/progress/weekly", authMiddleware, getWeeklyProgress);
+
+// get exercise progress
+router.get(
+  "/progress/exercise/:exerciseId",
+  authMiddleware,
+  getExerciseProgression,
+);
 
 // Get single workout
 router.get("/:id", authMiddleware, getWorkoutById);

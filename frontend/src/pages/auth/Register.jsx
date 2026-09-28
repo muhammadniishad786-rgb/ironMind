@@ -1,13 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  Dumbbell,
+  Mail,
+  Lock,
+  User,
   Eye,
   EyeOff,
-  Dumbbell,
+  Target,
+  BarChart3,
   ArrowRight,
-  Loader2,
-  Check,
 } from "lucide-react";
 
 import {
@@ -28,20 +31,15 @@ const Register = () => {
     name: "",
     email: "",
     password: "",
+    goal: "",
+    experience: "",
   });
 
   const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    if (registerSuccess) {
-      const timer = setTimeout(() => {
-        dispatch(clearRegisterSuccess());
-        navigate("/login");
-      }, 1200);
-
-      return () => clearTimeout(timer);
-    }
-  }, [registerSuccess, navigate, dispatch]);
+  // =========================
+  // HANDLE INPUT CHANGE
+  // =========================
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,187 +54,171 @@ const Register = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  // =========================
+  // HANDLE REGISTER
+  // =========================
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    dispatch(registerUser(formData));
+    const result = await dispatch(registerUser(formData));
+
+    if (registerUser.fulfilled.match(result)) {
+      dispatch(clearRegisterSuccess());
+
+      navigate("/login");
+    }
   };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex">
+      {/* =========================
+          LEFT SIDE
+      ========================= */}
 
-      {/* LEFT SIDE */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-black">
+        {/* Background */}
+        <div className="absolute inset-0">
+          <div className="absolute w-96 h-96 bg-orange-500/20 rounded-full blur-3xl -top-20 -left-20" />
+          <div className="absolute w-96 h-96 bg-orange-600/10 rounded-full blur-3xl bottom-0 right-0" />
+        </div>
 
-        <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-900 to-orange-950/30" />
-
-        <div className="absolute top-20 right-10 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
-
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl" />
-
-        <div className="relative z-10 flex flex-col justify-between p-12 xl:p-16 w-full">
-
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-
             <div className="w-11 h-11 rounded-xl bg-orange-500 flex items-center justify-center">
-              <Dumbbell size={24} strokeWidth={2.5} />
+              <Dumbbell size={24} className="text-black" />
             </div>
 
-            <div>
-              <h1 className="text-xl font-black">
-                IRON<span className="text-orange-500">MIND</span>
-              </h1>
-
-              <p className="text-[10px] uppercase tracking-[0.25em] text-zinc-500">
-                Train. Track. Transform.
-              </p>
-            </div>
-
+            <span className="text-2xl font-bold tracking-tight">
+              Iron<span className="text-orange-500">Mind</span>
+            </span>
           </div>
 
-          {/* Content */}
+          {/* Hero Text */}
           <div className="max-w-lg">
-
-            <p className="text-orange-500 text-sm font-semibold uppercase tracking-[0.25em] mb-5">
-              Start today
+            <p className="text-orange-500 font-semibold uppercase tracking-[0.2em] text-sm mb-4">
+              Start Your Journey
             </p>
 
-            <h2 className="text-5xl xl:text-6xl font-black leading-[1.05] tracking-tight">
-              YOUR
-              <br />
-              <span className="text-zinc-500">PROGRESS</span>
-              <br />
-              STARTS NOW.
-            </h2>
+            <h1 className="text-5xl xl:text-6xl font-black leading-tight">
+              Build your
+              <span className="text-orange-500"> stronger </span>
+              self.
+            </h1>
 
-            <p className="mt-6 text-zinc-400 leading-relaxed max-w-md">
-              Build better habits, track every workout, and see how
-              you're improving over time.
+            <p className="text-zinc-400 text-lg mt-6 leading-relaxed">
+              Track your workouts, monitor your progress, and stay consistent
+              with IronMind.
             </p>
-
-            {/* Features */}
-            <div className="mt-8 space-y-3">
-
-              {[
-                "Track your workouts",
-                "Monitor strength progress",
-                "Build consistent habits",
-              ].map((feature) => (
-                <div
-                  key={feature}
-                  className="flex items-center gap-3 text-sm text-zinc-400"
-                >
-                  <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center">
-                    <Check size={14} className="text-orange-500" />
-                  </div>
-
-                  {feature}
-                </div>
-              ))}
-
-            </div>
-
           </div>
 
-          <div className="text-sm text-zinc-600">
-            © {new Date().getFullYear()} IronMind
+          {/* Bottom */}
+          <div className="text-zinc-600 text-sm">
+            Train hard. Track everything. Become stronger.
           </div>
-
         </div>
       </div>
 
-      {/* RIGHT SIDE */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-5 py-10 sm:px-8">
+      {/* =========================
+          RIGHT SIDE
+      ========================= */}
 
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-10 overflow-y-auto">
         <div className="w-full max-w-md">
-
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-
+          <div className="flex lg:hidden items-center justify-center gap-3 mb-10">
             <div className="w-11 h-11 rounded-xl bg-orange-500 flex items-center justify-center">
-              <Dumbbell size={24} />
+              <Dumbbell size={24} className="text-black" />
             </div>
 
-            <div>
-              <h1 className="text-xl font-black">
-                IRON<span className="text-orange-500">MIND</span>
-              </h1>
-
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500">
-                Train. Track. Transform.
-              </p>
-            </div>
-
+            <span className="text-2xl font-bold">
+              Iron<span className="text-orange-500">Mind</span>
+            </span>
           </div>
 
           {/* Heading */}
           <div className="mb-8">
-
-            <p className="text-orange-500 text-sm font-semibold mb-3">
+            <h2 className="text-3xl font-bold tracking-tight">
               Create your account
-            </p>
-
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
-              Join IronMind
             </h2>
 
-            <p className="text-zinc-500 mt-3 text-sm">
+            <p className="text-zinc-400 mt-2">
               Start tracking your fitness journey today.
             </p>
-
           </div>
 
-          {/* Success */}
+          {/* =========================
+              SUCCESS MESSAGE
+          ========================= */}
+
           {registerSuccess && (
-            <div className="mb-5 flex items-center gap-3 rounded-xl border border-green-500/20 bg-green-500/10 px-4 py-3 text-sm text-green-400">
-              <Check size={18} />
-              Account created successfully!
+            <div className="mb-6 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
+              Account created successfully. Redirecting to login...
             </div>
           )}
 
-          {/* Error */}
+          {/* =========================
+              ERROR MESSAGE
+          ========================= */}
+
           {error && (
-            <div className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* =========================
+              FORM
+          ========================= */}
 
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Full name
+                Full Name
               </label>
 
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Muhammad Nishad"
-                required
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-              />
+              <div className="relative">
+                <User
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                />
+
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Enter your name"
+                  required
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3.5 pl-11 pr-4 outline-none transition focus:border-orange-500 placeholder:text-zinc-600"
+                />
+              </div>
             </div>
 
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-zinc-300 mb-2">
-                Email address
+                Email
               </label>
 
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                required
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
-              />
+              <div className="relative">
+                <Mail
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                />
+
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  required
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3.5 pl-11 pr-4 outline-none transition focus:border-orange-500 placeholder:text-zinc-600"
+                />
+              </div>
             </div>
 
             {/* Password */}
@@ -246,16 +228,20 @@ const Register = () => {
               </label>
 
               <div className="relative">
+                <Lock
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                />
 
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Create a strong password"
+                  placeholder="Create a password"
                   required
                   minLength={6}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-900/70 px-4 py-3.5 pr-12 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-orange-500 focus:ring-1 focus:ring-orange-500"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3.5 pl-11 pr-12 outline-none transition focus:border-orange-500 placeholder:text-zinc-600"
                 />
 
                 <button
@@ -264,63 +250,109 @@ const Register = () => {
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition"
                 >
                   {showPassword ? (
-                    <EyeOff size={19} />
+                    <EyeOff size={18} />
                   ) : (
-                    <Eye size={19} />
+                    <Eye size={18} />
                   )}
                 </button>
-
               </div>
-
-              <p className="mt-2 text-xs text-zinc-600">
-                Password must contain at least 6 characters.
-              </p>
             </div>
 
-            {/* Register */}
+            {/* Goal */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                Your Goal
+              </label>
+
+              <div className="relative">
+                <Target
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+                />
+
+                <select
+                  name="goal"
+                  value={formData.goal}
+                  onChange={handleChange}
+                  required
+                  className="w-full appearance-none bg-zinc-900 border border-zinc-800 rounded-xl py-3.5 pl-11 pr-4 outline-none transition focus:border-orange-500 text-zinc-300"
+                >
+                  <option value="" disabled>
+                    Select your goal
+                  </option>
+
+                  <option value="muscle_gain">Muscle Gain</option>
+
+                  <option value="weight_loss">Weight Loss</option>
+
+                  <option value="strength">Strength</option>
+
+                  <option value="general_fitness">General Fitness</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Experience */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-2">
+                Experience Level
+              </label>
+
+              <div className="relative">
+                <BarChart3
+                  size={18}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+                />
+
+                <select
+                  name="experience"
+                  value={formData.experience}
+                  onChange={handleChange}
+                  required
+                  className="w-full appearance-none bg-zinc-900 border border-zinc-800 rounded-xl py-3.5 pl-11 pr-4 outline-none transition focus:border-orange-500 text-zinc-300"
+                >
+                  <option value="" disabled>
+                    Select your experience
+                  </option>
+
+                  <option value="beginner">Beginner</option>
+
+                  <option value="intermediate">Intermediate</option>
+
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Register Button */}
             <button
               type="submit"
-              disabled={loading || registerSuccess}
-              className="group w-full flex items-center justify-center gap-2 rounded-xl bg-orange-500 py-3.5 font-bold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={loading}
+              className="w-full bg-orange-500 hover:bg-orange-400 disabled:bg-orange-500/50 disabled:cursor-not-allowed text-black font-bold rounded-xl py-3.5 transition flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
-                <>
-                  <Loader2 size={19} className="animate-spin" />
-                  Creating account...
-                </>
-              ) : registerSuccess ? (
-                <>
-                  <Check size={19} />
-                  Account created
-                </>
+                "Creating account..."
               ) : (
                 <>
-                  Create account
-                  <ArrowRight
-                    size={19}
-                    className="transition-transform group-hover:translate-x-1"
-                  />
+                  Create Account
+                  <ArrowRight size={18} />
                 </>
               )}
             </button>
-
           </form>
 
           {/* Login */}
-          <div className="mt-8 text-center text-sm text-zinc-500">
+          <p className="text-center text-zinc-500 text-sm mt-8">
             Already have an account?{" "}
             <Link
               to="/login"
-              className="font-semibold text-orange-500 hover:text-orange-400 transition"
+              className="text-orange-500 hover:text-orange-400 font-semibold transition"
             >
-              Sign in
+              Login
             </Link>
-          </div>
-
+          </p>
         </div>
-
       </div>
-
     </div>
   );
 };

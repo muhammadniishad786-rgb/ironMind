@@ -12,6 +12,7 @@ import Progress from "../pages/progress/Progress";
 import Exercises from "../pages/exercises/Exercises";
 import ExerciseDetails from "../pages/exercises/ExercisesDetails";
 import WorkoutDetails from "../pages/workout/WorkoutDetails";
+import Profile from "../pages/profile/Profile";
 
 const MainRoute = () => {
   return (
@@ -42,6 +43,10 @@ const MainRoute = () => {
             <Route path="/exercises/:id" element={<ExerciseDetails />} />
 
             <Route path="/progress" element={<Progress />} />
+
+            <Route path="/profile" element={<Profile />} />
+
+
           </Route>
         </Route>
 

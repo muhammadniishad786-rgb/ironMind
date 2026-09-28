@@ -560,7 +560,10 @@ export const getWeeklyProgress = async (req, res) => {
         Object.values(dailyWorkouts),
     });
   } catch (error) {
-    console.error("Get weekly progress error:", error);
+    console.error(
+      "Get weekly progress error:",
+      error
+    );
 
     return res.status(500).json({
       message: "Failed to get weekly progress",
@@ -583,67 +586,75 @@ export const getPersonalRecords = async (req, res) => {
     const personalRecords = {};
 
     workouts.forEach((workout) => {
-      workout.exercises.forEach((workoutExercise) => {
-        const exercise = workoutExercise.exercise;
+      workout.exercises.forEach(
+        (workoutExercise) => {
+          const exercise =
+            workoutExercise.exercise;
 
-        if (!exercise) {
-          return;
-        }
-
-        const exerciseId =
-          exercise._id.toString();
-
-        const exerciseName =
-          exercise.name;
-
-        if (!personalRecords[exerciseId]) {
-          personalRecords[exerciseId] = {
-            exerciseId: exercise._id,
-            exerciseName,
-            muscleGroup:
-              exercise.muscleGroup,
-            maxWeight: 0,
-            maxWeightReps: 0,
-            totalVolume: 0,
-            achievedAt: null,
-          };
-        }
-
-        workoutExercise.performedSets.forEach(
-          (set) => {
-            if (!set.completed) {
-              return;
-            }
-
-            const weight = set.weight || 0;
-            const reps = set.reps || 0;
-            const volume = weight * reps;
-
-            personalRecords[
-              exerciseId
-            ].totalVolume += volume;
-
-            if (
-              weight >
-              personalRecords[exerciseId]
-                .maxWeight
-            ) {
-              personalRecords[
-                exerciseId
-              ].maxWeight = weight;
-
-              personalRecords[
-                exerciseId
-              ].maxWeightReps = reps;
-
-              personalRecords[
-                exerciseId
-              ].achievedAt =
-                workout.completedAt;
-            }
+          if (!exercise) {
+            return;
           }
-        );
-      });
+
+          const exerciseId =
+            exercise._id.toString();
+
+          const exerciseName =
+            exercise.name;
+
+          if (!personalRecords[exerciseId]) {
+            personalRecords[exerciseId] = {
+              exerciseId: exercise._id,
+              exerciseName,
+              muscleGroup:
+                exercise.muscleGroup,
+              maxWeight: 0,
+              maxWeightReps: 0,
+              totalVolume: 0,
+              achievedAt: null,
+            };
+          }
+
+          workoutExercise.performedSets.forEach(
+            (set) => {
+              if (!set.completed) {
+                return;
+              }
+
+              const weight =
+                set.weight || 0;
+
+              const reps =
+                set.reps || 0;
+
+              const volume =
+                weight * reps;
+
+              personalRecords[
+                exerciseId
+              ].totalVolume += volume;
+
+              if (
+                weight >
+                personalRecords[exerciseId]
+                  .maxWeight
+              ) {
+                personalRecords[
+                  exerciseId
+                ].maxWeight = weight;
+
+                personalRecords[
+                  exerciseId
+                ].maxWeightReps = reps;
+
+                personalRecords[
+                  exerciseId
+                ].achievedAt =
+                  workout.completedAt;
+              }
+            }
+          );
+        }
+      );
     });
 
     return res.status(200).json({
@@ -723,8 +734,11 @@ export const getExerciseProgression = async (
             return;
           }
 
-          const weight = set.weight || 0;
-          const reps = set.reps || 0;
+          const weight =
+            set.weight || 0;
+
+          const reps =
+            set.reps || 0;
 
           totalReps += reps;
 
@@ -988,14 +1002,54 @@ export const getProgressDashboard = async (
           const muscleGroup =
             exercise.muscleGroup;
 
-          // Muscle group count
+          // =========================
+          // MUSCLE GROUP VOLUME
+          // =========================
+          //
+          // Instead of counting exercises,
+          // calculate actual volume:
+          //
+          // weight × reps
+          //
+          // Example:
+          // Chest:
+          // 40kg × 10 = 400kg
+          // 40kg × 10 = 400kg
+          // 50kg × 8  = 400kg
+          //
+          // Total = 1200kg
+          // =========================
+
           if (muscleGroup) {
-            muscleGroups[muscleGroup] =
-              (muscleGroups[muscleGroup] ||
-                0) + 1;
+            if (!muscleGroups[muscleGroup]) {
+              muscleGroups[muscleGroup] = 0;
+            }
+
+            workoutExercise.performedSets.forEach(
+              (set) => {
+                if (!set.completed) {
+                  return;
+                }
+
+                const reps =
+                  Number(set.reps) || 0;
+
+                const weight =
+                  Number(set.weight) || 0;
+
+                const volume =
+                  reps * weight;
+
+                muscleGroups[muscleGroup] +=
+                  volume;
+              }
+            );
           }
 
-          // Exercise statistics
+          // =========================
+          // EXERCISE STATISTICS
+          // =========================
+
           if (
             !exerciseStats[exerciseId]
           ) {
@@ -1018,10 +1072,10 @@ export const getProgressDashboard = async (
               }
 
               const reps =
-                set.reps || 0;
+                Number(set.reps) || 0;
 
               const weight =
-                set.weight || 0;
+                Number(set.weight) || 0;
 
               const volume =
                 reps * weight;
@@ -1130,8 +1184,8 @@ export const getProgressDashboard = async (
               }
 
               workoutVolume +=
-                (set.reps || 0) *
-                (set.weight || 0);
+                (Number(set.reps) || 0) *
+                (Number(set.weight) || 0);
             }
           );
         }

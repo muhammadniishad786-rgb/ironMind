@@ -92,3 +92,15 @@ export const getExerciseProgression = (exerciseId) => {
     `/workouts/progress/exercise/${exerciseId}`
   );
 };
+
+// =========================
+// EXERCISE COMPLETION
+// =========================
+export const completeWorkoutExercise = (
+  workoutId,
+  exerciseId
+) => {
+  return api.patch(
+    `/workouts/${workoutId}/exercises/${exerciseId}/complete`
+  );
+};

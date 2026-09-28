@@ -57,6 +57,7 @@ router.patch("/:id/complete", authMiddleware, completeWorkout);
 
 router.patch(
   "/:workoutId/exercises/:exerciseId/complete",
+  authMiddleware,
   completeWorkoutExercise
 );
 

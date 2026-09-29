@@ -1,6 +1,13 @@
 import { Bell, Menu, User } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const Header = ({ setIsSidebarOpen }) => {
+
+  const navigate = useNavigate()
+
+  const handleNavigate = () => {
+    navigate("/profile")
+  }
   return (
     <header className="sticky top-0 z-30 h-16 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur">
 
@@ -33,7 +40,9 @@ const Header = ({ setIsSidebarOpen }) => {
           </button>
 
           {/* Profile */}
-          <button className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-zinc-900">
+          <button className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-zinc-900"
+           onClick={() => handleNavigate()}
+          >
 
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-800">
               <User size={18} className="text-zinc-400" />

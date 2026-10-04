@@ -4,6 +4,7 @@ import {
   generateAIWorkout,
   askAI,
   saveAIWorkout,
+  getAIProgression,
 } from "../../services/aiApi";
 
 // =====================================================
@@ -67,6 +68,26 @@ export const sendAIMessage = createAsyncThunk(
 );
 
 // =====================================================
+// AI PROGRESSION
+// =====================================================
+
+export const getProgression = createAsyncThunk(
+  "ai/getProgression",
+  async (exerciseId, { rejectWithValue }) => {
+    try {
+      const data = await getAIProgression(exerciseId);
+
+      return data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message ||
+          "Failed to generate AI progression"
+      );
+    }
+  }
+);
+
+// =====================================================
 // INITIAL STATE
 // =====================================================
 
@@ -75,11 +96,16 @@ const initialState = {
   savedWorkout: null,
   response: "",
 
+  // AI progression
+  progression: null,
+
   loading: false,
   saving: false,
+  progressionLoading: false,
 
   error: null,
   saveError: null,
+  progressionError: null,
 
   saveSuccess: false,
 };
@@ -108,6 +134,11 @@ const aiSlice = createSlice({
       state.saveSuccess = false;
       state.saveError = null;
       state.savedWorkout = null;
+    },
+
+    clearProgression: (state) => {
+      state.progression = null;
+      state.progressionError = null;
     },
   },
 
@@ -172,14 +203,42 @@ const aiSlice = createSlice({
       .addCase(sendAIMessage.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // =================================================
+      // AI PROGRESSION
+      // =================================================
+
+      .addCase(getProgression.pending, (state) => {
+        state.progressionLoading = true;
+        state.progressionError = null;
+      })
+
+      .addCase(getProgression.fulfilled, (state, action) => {
+        state.progressionLoading = false;
+        state.progression = action.payload;
+      })
+
+      .addCase(getProgression.rejected, (state, action) => {
+        state.progressionLoading = false;
+        state.progressionError = action.payload;
       });
   },
 });
+
+// =====================================================
+// ACTIONS
+// =====================================================
 
 export const {
   clearWorkout,
   clearAIResponse,
   clearSaveStatus,
+  clearProgression,
 } = aiSlice.actions;
+
+// =====================================================
+// REDUCER
+// =====================================================
 
 export default aiSlice.reducer;

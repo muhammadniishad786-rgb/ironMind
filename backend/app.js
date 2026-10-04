@@ -6,6 +6,7 @@ import authRoutes from "./src/routes/authRoutes.js"
 import profileRoutes from "./src/routes/profileRoutes.js"
 import exerciseRoutes from "./src/routes/exerciseRoutes.js"
 import workoutRoutes from "./src/routes/workoutRoutes.js"
+import aiRoutes from "./src/routes/aiRoutes.js"
 
 dotenv.config();
 
@@ -21,6 +22,8 @@ app.use("/api/auth", authRoutes)
 app.use("/api", profileRoutes)
 app.use("/api/exercises", exerciseRoutes)
 app.use("/api/workouts", workoutRoutes)
+
+app.use("/api/ai", aiRoutes)
 
 app.get("/", (req, res) => {
   res.json({

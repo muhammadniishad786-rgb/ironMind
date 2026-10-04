@@ -3,6 +3,7 @@ import express from "express";
 import {
   askAI,
   createAIWorkout,
+  getAIProgression,
   saveAIWorkout,
 } from "../controllers/aiController.js";
 
@@ -28,6 +29,12 @@ router.post(
   "/save-workout",
   authMiddleware,
   saveAIWorkout
+);
+
+router.post(
+  "/progression",
+  authMiddleware,
+  getAIProgression
 );
 
 export default router;

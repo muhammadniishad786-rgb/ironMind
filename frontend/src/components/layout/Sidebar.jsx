@@ -8,6 +8,7 @@ import {
   User,
   LogOut,
   X,
+  BrainCircuit,
 } from "lucide-react";
 
 import { logout } from "../../store/slices/authSlice";
@@ -21,6 +22,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       name: "Dashboard",
       path: "/dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      name: "AI-Coach",
+      path: "/ai-workout",
+      icon: BrainCircuit
     },
     {
       name: "Workouts",

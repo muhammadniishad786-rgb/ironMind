@@ -1,10 +1,7 @@
 import Exercise from "../models/exerciseModel.js";
 import Workout from "../models/workoutModel.js";
 
-import {
-  generateAIResponse,
-  generateWorkout,
-} from "../services/aiService.js";
+import { generateAIResponse, generateWorkout, generateProgression } from "../services/aiService.js";
 
 // =====================================================
 // GENERAL AI CHAT
@@ -20,8 +17,7 @@ export const askAI = async (req, res) => {
       });
     }
 
-    const answer =
-      await generateAIResponse(message);
+    const answer = await generateAIResponse(message);
 
     return res.status(200).json({
       message: answer,
@@ -42,12 +38,7 @@ export const askAI = async (req, res) => {
 
 export const createAIWorkout = async (req, res) => {
   try {
-    const {
-      muscleGroup,
-      difficulty,
-      goal,
-      equipment,
-    } = req.body;
+    const { muscleGroup, difficulty, goal, equipment } = req.body;
 
     // -------------------------------------------------
     // Validate request
@@ -82,14 +73,10 @@ export const createAIWorkout = async (req, res) => {
       workout,
     });
   } catch (error) {
-    console.error(
-      "AI Workout Error:",
-      error
-    );
+    console.error("AI Workout Error:", error);
 
     return res.status(500).json({
-      message:
-        "Failed to generate AI workout",
+      message: "Failed to generate AI workout",
       error: error.message,
     });
   }
@@ -101,24 +88,15 @@ export const createAIWorkout = async (req, res) => {
 
 export const saveAIWorkout = async (req, res) => {
   try {
-    const {
-      workoutName,
-      description,
-      exercises,
-    } = req.body;
+    const { workoutName, description, exercises } = req.body;
 
     // -------------------------------------------------
     // Validate workout
     // -------------------------------------------------
 
-    if (
-      !workoutName ||
-      !Array.isArray(exercises) ||
-      exercises.length === 0
-    ) {
+    if (!workoutName || !Array.isArray(exercises) || exercises.length === 0) {
       return res.status(400).json({
-        message:
-          "Workout name and exercises are required",
+        message: "Workout name and exercises are required",
       });
     }
 
@@ -126,29 +104,21 @@ export const saveAIWorkout = async (req, res) => {
     // Get exercise IDs
     // -------------------------------------------------
 
-    const exerciseIds = exercises.map(
-      (exercise) =>
-        exercise.exerciseId
-    );
+    const exerciseIds = exercises.map((exercise) => exercise.exerciseId);
 
     // -------------------------------------------------
     // Validate exercise IDs
     // -------------------------------------------------
 
-    const existingExercises =
-      await Exercise.find({
-        _id: {
-          $in: exerciseIds,
-        },
-      });
+    const existingExercises = await Exercise.find({
+      _id: {
+        $in: exerciseIds,
+      },
+    });
 
-    if (
-      existingExercises.length !==
-      exerciseIds.length
-    ) {
+    if (existingExercises.length !== exerciseIds.length) {
       return res.status(400).json({
-        message:
-          "Some exercises were not found",
+        message: "Some exercises were not found",
       });
     }
 
@@ -156,70 +126,52 @@ export const saveAIWorkout = async (req, res) => {
     // Create workout exercises
     // -------------------------------------------------
 
-    const workoutExercises =
-      exercises.map((exercise) => ({
-        exercise:
-          exercise.exerciseId,
+    const workoutExercises = exercises.map((exercise) => ({
+      exercise: exercise.exerciseId,
 
-        sets:
-          exercise.sets,
+      sets: exercise.sets,
 
-        reps:
-          exercise.reps,
+      reps: exercise.reps,
 
-        restTime:
-          exercise.restTime,
-      }));
+      restTime: exercise.restTime,
+    }));
 
     // -------------------------------------------------
     // Create workout
     // -------------------------------------------------
 
-    const workout =
-      await Workout.create({
-        user: req.user.userId,
+    const workout = await Workout.create({
+      user: req.user.userId,
 
-        name: workoutName,
+      name: workoutName,
 
-        description:
-          description || "",
+      description: description || "",
 
-        exercises:
-          workoutExercises,
-      });
+      exercises: workoutExercises,
+    });
 
     // -------------------------------------------------
     // Populate exercise details
     // -------------------------------------------------
 
-    const populatedWorkout =
-      await workout.populate(
-        "exercises.exercise"
-      );
+    const populatedWorkout = await workout.populate("exercises.exercise");
 
     // -------------------------------------------------
     // Response
     // -------------------------------------------------
 
     return res.status(201).json({
-      message:
-        "AI workout saved successfully",
+      message: "AI workout saved successfully",
 
-      workout:
-        populatedWorkout,
+      workout: populatedWorkout,
     });
   } catch (error) {
-    console.error(
-      "Save AI workout error:",
-      error
-    );
+    console.error("Save AI workout error:", error);
 
     return res.status(500).json({
-      message:
-        "Failed to save AI workout",
+      message: "Failed to save AI workout",
 
-      error:
-        error.message,
+      error: error.message,
     });
   }
 };
@@ -228,19 +180,16 @@ export const saveAIWorkout = async (req, res) => {
 // AI PROGRESSION
 // =====================================================
 
-export const getAIProgression = async (
-  req,
-  res
-) => {
+export const getAIProgression = async (req, res) => {
   try {
-    const {
-      exerciseId,
-    } = req.body;
+    console.log("AI Progression Request Body:", req.body);
+
+    const { exerciseId } = req.body || {};
 
     if (!exerciseId) {
       return res.status(400).json({
-        message:
-          "Exercise ID is required",
+        message: "Exercise ID is required",
+        receivedBody: req.body || null,
       });
     }
 
@@ -248,24 +197,21 @@ export const getAIProgression = async (
     // Get user's completed workout history
     // -----------------------------------------
 
-    const workouts =
-      await Workout.find({
-        user: req.user.userId,
-        completed: true,
-        "exercises.exercise":
-          exerciseId,
-      })
-        .populate(
-          "exercises.exercise"
-        )
-        .sort({
-          completedAt: 1,
-        });
+    console.log("User ID:", req.user.userId);
+    console.log("Exercise ID:", exerciseId);
+    const workouts = await Workout.find({
+      user: req.user.userId,
+      completed: true,
+      "exercises.exercise": exerciseId,
+    })
+      .populate("exercises.exercise")
+      .sort({
+        completedAt: 1,
+      });
 
     if (workouts.length === 0) {
       return res.status(404).json({
-        message:
-          "Not enough workout history for AI progression",
+        message: "Not enough workout history for AI progression",
       });
     }
 
@@ -279,23 +225,17 @@ export const getAIProgression = async (
     let muscleGroup = "";
 
     workouts.forEach((workout) => {
-      const workoutExercise =
-        workout.exercises.find(
-          (item) =>
-            item.exercise &&
-            item.exercise._id.toString() ===
-              exerciseId
-        );
+      const workoutExercise = workout.exercises.find(
+        (item) => item.exercise && item.exercise._id.toString() === exerciseId,
+      );
 
       if (!workoutExercise) {
         return;
       }
 
-      exerciseName =
-        workoutExercise.exercise.name;
+      exerciseName = workoutExercise.exercise.name;
 
-      muscleGroup =
-        workoutExercise.exercise.muscleGroup;
+      muscleGroup = workoutExercise.exercise.muscleGroup;
 
       let maxWeight = 0;
       let totalReps = 0;
@@ -303,36 +243,30 @@ export const getAIProgression = async (
 
       const sets = [];
 
-      workoutExercise.performedSets.forEach(
-        (set) => {
-          if (!set.completed) {
-            return;
-          }
-
-          const weight =
-            Number(set.weight) || 0;
-
-          const reps =
-            Number(set.reps) || 0;
-
-          const volume =
-            weight * reps;
-
-          if (weight > maxWeight) {
-            maxWeight = weight;
-          }
-
-          totalReps += reps;
-          totalVolume += volume;
-
-          sets.push({
-            setNumber:
-              set.setNumber,
-            weight,
-            reps,
-          });
+      workoutExercise.performedSets.forEach((set) => {
+        if (!set.completed) {
+          return;
         }
-      );
+
+        const weight = Number(set.weight) || 0;
+
+        const reps = Number(set.reps) || 0;
+
+        const volume = weight * reps;
+
+        if (weight > maxWeight) {
+          maxWeight = weight;
+        }
+
+        totalReps += reps;
+        totalVolume += volume;
+
+        sets.push({
+          setNumber: set.setNumber,
+          weight,
+          reps,
+        });
+      });
 
       if (sets.length === 0) {
         return;
@@ -340,8 +274,7 @@ export const getAIProgression = async (
 
       history.push({
         date: workout.completedAt,
-        workoutName:
-          workout.name,
+        workoutName: workout.name,
         maxWeight,
         totalReps,
         totalVolume,
@@ -351,48 +284,40 @@ export const getAIProgression = async (
 
     if (history.length === 0) {
       return res.status(404).json({
-        message:
-          "No completed performance data found for this exercise",
+        message: "No completed performance data found for this exercise",
       });
     }
 
     // -----------------------------------------
-    // Keep recent history
+    // Use recent history
     // -----------------------------------------
 
-    const recentHistory =
-      history.slice(-5);
+    const recentHistory = history.slice(-5);
+
+    console.log("AI Progression History:", recentHistory);
 
     // -----------------------------------------
     // Generate AI progression
     // -----------------------------------------
 
-    const progression =
-      await generateProgression({
-        exerciseName,
-        muscleGroup,
-        history:
-          recentHistory,
-      });
+    const progression = await generateProgression({
+      exerciseName,
+      muscleGroup,
+      history: recentHistory,
+    });
 
     return res.status(200).json({
-      message:
-        "AI progression generated successfully",
+      message: "AI progression generated successfully",
 
       progression,
 
-      history:
-        recentHistory,
+      history: recentHistory,
     });
   } catch (error) {
-    console.error(
-      "AI progression controller error:",
-      error
-    );
+    console.error("AI progression controller error:", error);
 
     return res.status(500).json({
-      message:
-        "Failed to generate AI progression",
+      message: "Failed to generate AI progression",
       error: error.message,
     });
   }

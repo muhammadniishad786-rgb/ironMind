@@ -22,9 +22,6 @@ import {
   Trophy,
   Trash2,
   PlayCircle,
-  Square,
-  Plus,
-  Minus,
 } from "lucide-react";
 
 import {
@@ -114,8 +111,7 @@ const WorkoutDetails = () => {
       (seconds % 3600) / 60
     );
 
-    const remainingSeconds =
-      seconds % 60;
+    const remainingSeconds = seconds % 60;
 
     return [
       hours,
@@ -302,10 +298,14 @@ const WorkoutDetails = () => {
       return;
     }
 
+    const sets =
+      performedSets[exerciseId] || [];
+
     dispatch(
       completeWorkoutExercise({
         workoutId: id,
         exerciseId,
+        performedSets: sets,
       })
     );
   };
@@ -450,14 +450,6 @@ const WorkoutDetails = () => {
     workout.exercises?.filter(
       (exercise) => exercise.completed
     ).length || 0;
-
-  // =========================
-  // COMPLETED WORKOUT
-  // =========================
-
-  if (workout.completed) {
-    // We intentionally still show the details page.
-  }
 
   return (
     <div className="space-y-8">
@@ -782,8 +774,7 @@ const WorkoutDetails = () => {
                   workoutExercise.exercise;
 
                 const isExerciseObject =
-                  typeof exercise ===
-                    "object" &&
+                  typeof exercise === "object" &&
                   exercise !== null;
 
                 const exerciseName =
@@ -836,9 +827,7 @@ const WorkoutDetails = () => {
                   exerciseId;
 
                 const currentSets =
-                  performedSets[
-                    exerciseId
-                  ] || [];
+                  performedSets[exerciseId] || [];
 
                 return (
                   <div
@@ -929,7 +918,7 @@ const WorkoutDetails = () => {
                             </Link>
                           )}
 
-                        {/* OLD COMPLETE EXERCISE */}
+                        {/* COMPLETE EXERCISE */}
 
                         {exerciseCompleted ? (
                           <button
@@ -946,8 +935,7 @@ const WorkoutDetails = () => {
                           <button
                             type="button"
                             disabled={
-                              exerciseCompleteLoading ||
-                              isWorkoutStarted
+                              exerciseCompleteLoading
                             }
                             onClick={() =>
                               handleCompleteExercise(

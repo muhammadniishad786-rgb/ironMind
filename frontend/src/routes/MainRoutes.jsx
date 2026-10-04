@@ -13,6 +13,7 @@ import Exercises from "../pages/exercises/Exercises";
 import ExerciseDetails from "../pages/exercises/ExercisesDetails";
 import WorkoutDetails from "../pages/workout/WorkoutDetails";
 import Profile from "../pages/profile/Profile";
+import AIWorkoutGenerator from "../pages/AI/AiWorkoutGenerator";
 
 const MainRoute = () => {
   return (
@@ -45,6 +46,8 @@ const MainRoute = () => {
             <Route path="/progress" element={<Progress />} />
 
             <Route path="/profile" element={<Profile />} />
+
+            <Route path="/ai-workout" element={<AIWorkoutGenerator />} />
 
 
           </Route>

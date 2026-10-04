@@ -1,10 +1,15 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+
 import {
   generateAIWorkout,
   askAI,
+  saveAIWorkout,
 } from "../../services/aiApi";
 
-// Generate workout
+// =====================================================
+// GENERATE AI WORKOUT
+// =====================================================
+
 export const generateWorkout = createAsyncThunk(
   "ai/generateWorkout",
   async (workoutData, { rejectWithValue }) => {
@@ -21,7 +26,30 @@ export const generateWorkout = createAsyncThunk(
   }
 );
 
-// Ask AI
+// =====================================================
+// SAVE AI WORKOUT
+// =====================================================
+
+export const saveWorkout = createAsyncThunk(
+  "ai/saveWorkout",
+  async (workoutData, { rejectWithValue }) => {
+    try {
+      const data = await saveAIWorkout(workoutData);
+
+      return data.workout;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message ||
+          "Failed to save workout"
+      );
+    }
+  }
+);
+
+// =====================================================
+// AI CHAT
+// =====================================================
+
 export const sendAIMessage = createAsyncThunk(
   "ai/sendAIMessage",
   async (message, { rejectWithValue }) => {
@@ -38,15 +66,31 @@ export const sendAIMessage = createAsyncThunk(
   }
 );
 
+// =====================================================
+// INITIAL STATE
+// =====================================================
+
 const initialState = {
   workout: null,
+  savedWorkout: null,
   response: "",
+
   loading: false,
+  saving: false,
+
   error: null,
+  saveError: null,
+
+  saveSuccess: false,
 };
+
+// =====================================================
+// SLICE
+// =====================================================
 
 const aiSlice = createSlice({
   name: "ai",
+
   initialState,
 
   reducers: {
@@ -59,12 +103,21 @@ const aiSlice = createSlice({
       state.response = "";
       state.error = null;
     },
+
+    clearSaveStatus: (state) => {
+      state.saveSuccess = false;
+      state.saveError = null;
+      state.savedWorkout = null;
+    },
   },
 
   extraReducers: (builder) => {
     builder
 
-      // Generate Workout
+      // =================================================
+      // GENERATE WORKOUT
+      // =================================================
+
       .addCase(generateWorkout.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -80,7 +133,32 @@ const aiSlice = createSlice({
         state.error = action.payload;
       })
 
-      // AI Chat
+      // =================================================
+      // SAVE WORKOUT
+      // =================================================
+
+      .addCase(saveWorkout.pending, (state) => {
+        state.saving = true;
+        state.saveError = null;
+        state.saveSuccess = false;
+      })
+
+      .addCase(saveWorkout.fulfilled, (state, action) => {
+        state.saving = false;
+        state.savedWorkout = action.payload;
+        state.saveSuccess = true;
+      })
+
+      .addCase(saveWorkout.rejected, (state, action) => {
+        state.saving = false;
+        state.saveError = action.payload;
+        state.saveSuccess = false;
+      })
+
+      // =================================================
+      // AI CHAT
+      // =================================================
+
       .addCase(sendAIMessage.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -101,6 +179,7 @@ const aiSlice = createSlice({
 export const {
   clearWorkout,
   clearAIResponse,
+  clearSaveStatus,
 } = aiSlice.actions;
 
 export default aiSlice.reducer;

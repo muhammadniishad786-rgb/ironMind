@@ -57,22 +57,49 @@ export const generateWorkout = async ({
 }) => {
   try {
     // -------------------------------------------------
-    // 1. Find matching exercises from MongoDB
+    // 1. Normalize equipment
+    // -------------------------------------------------
+
+    const normalizedMuscleGroup =
+      muscleGroup.toLowerCase();
+
+    const normalizedDifficulty =
+      difficulty.toLowerCase();
+
+    const normalizedEquipment = equipment.map(
+      (item) => item.toLowerCase()
+    );
+
+    // -------------------------------------------------
+    // 2. Find matching exercises from MongoDB
+    // -------------------------------------------------
+    // $in allows multiple equipment types.
+    //
+    // Example:
+    // ["dumbbell", "machine", "cable"]
+    //
+    // MongoDB will return exercises using ANY
+    // of these equipment types.
     // -------------------------------------------------
 
     const exercises = await Exercise.find({
-      muscleGroup: muscleGroup.toLowerCase(),
-      equipment: equipment.toLowerCase(),
+      muscleGroup: normalizedMuscleGroup,
+
+      equipment: {
+        $in: normalizedEquipment,
+      },
     }).select(
       "_id name muscleGroup equipment difficulty instructions"
     );
 
     console.log(
-      `Found ${exercises.length} exercises for ${muscleGroup} + ${equipment}`
+      `Found ${exercises.length} exercises for ${normalizedMuscleGroup} + ${normalizedEquipment.join(
+        ", "
+      )}`
     );
 
     // -------------------------------------------------
-    // 2. Make sure exercises exist
+    // 3. Make sure exercises exist
     // -------------------------------------------------
 
     if (exercises.length === 0) {
@@ -82,18 +109,20 @@ export const generateWorkout = async ({
     }
 
     // -------------------------------------------------
-    // 3. Create a simplified exercise library
+    // 4. Create simplified exercise library
     // -------------------------------------------------
-    // We give Gemini the MongoDB ID.
-    // Gemini must return this ID instead of inventing
-    // exercise names.
+    // Gemini only receives exercises that actually
+    // exist in MongoDB.
     // -------------------------------------------------
 
-    const exerciseLibrary = exercises.map((exercise) => ({
-      exerciseId: exercise._id.toString(),
-      name: exercise.name,
-      difficulty: exercise.difficulty,
-    }));
+    const exerciseLibrary = exercises.map(
+      (exercise) => ({
+        exerciseId: exercise._id.toString(),
+        name: exercise.name,
+        equipment: exercise.equipment,
+        difficulty: exercise.difficulty,
+      })
+    );
 
     console.log(
       "Exercises provided to Gemini:",
@@ -101,7 +130,7 @@ export const generateWorkout = async ({
     );
 
     // -------------------------------------------------
-    // 4. Create AI prompt
+    // 5. Create AI prompt
     // -------------------------------------------------
 
     const prompt = `
@@ -109,14 +138,18 @@ You are generating a workout for the IronMind fitness application.
 
 USER REQUIREMENTS:
 
-Muscle Group: ${muscleGroup}
-Difficulty: ${difficulty}
+Muscle Group: ${normalizedMuscleGroup}
+Difficulty: ${normalizedDifficulty}
 Goal: ${goal}
-Equipment: ${equipment}
+Equipment Available: ${normalizedEquipment.join(", ")}
 
 AVAILABLE EXERCISES:
 
-${JSON.stringify(exerciseLibrary, null, 2)}
+${JSON.stringify(
+  exerciseLibrary,
+  null,
+  2
+)}
 
 ====================================================
 IMPORTANT RULES
@@ -140,20 +173,33 @@ IMPORTANT RULES
 
 8. Do not use exercises that are not in the list.
 
-9. Do not repeat the same exercise.
+9. Do not use equipment that is not listed in
+   "Equipment Available".
 
-10. Generate between 2 and 6 exercises depending on
+10. The user may have multiple equipment types available.
+    You may select exercises using ANY of the available
+    equipment types.
+
+11. When multiple equipment types are available,
+    create a balanced workout using different equipment
+    when appropriate.
+
+12. You do NOT need to use every available equipment type.
+
+13. Do not repeat the same exercise.
+
+14. Generate between 2 and 6 exercises depending on
     how many suitable exercises are available.
 
-11. Sets should normally be between 2 and 4.
+15. Sets should normally be between 2 and 4.
 
-12. Reps should normally be between 6 and 15.
+16. Reps should normally be between 6 and 15.
 
-13. Rest time must be in seconds.
+17. Rest time must be in seconds.
 
-14. Keep the workout realistic for the selected difficulty.
+18. Keep the workout realistic for the selected difficulty.
 
-15. The workout should match the user's goal.
+19. The workout should match the user's goal.
 
 ====================================================
 OUTPUT FORMAT
@@ -185,7 +231,7 @@ Use exactly this structure:
 `;
 
     // -------------------------------------------------
-    // 5. Send request to Gemini
+    // 6. Send request to Gemini
     // -------------------------------------------------
 
     const response = await ai.models.generateContent({
@@ -209,6 +255,8 @@ Use exactly this structure:
 
           Never modify exercise names.
 
+          Only use equipment available to the user.
+
           Always return valid JSON.
         `,
       },
@@ -220,7 +268,7 @@ Use exactly this structure:
     console.log(text);
 
     // -------------------------------------------------
-    // 6. Check empty response
+    // 7. Check empty response
     // -------------------------------------------------
 
     if (!text) {
@@ -230,7 +278,7 @@ Use exactly this structure:
     }
 
     // -------------------------------------------------
-    // 7. Parse JSON
+    // 8. Parse JSON
     // -------------------------------------------------
 
     let workout;
@@ -249,7 +297,7 @@ Use exactly this structure:
     }
 
     // -------------------------------------------------
-    // 8. Validate workout structure
+    // 9. Validate workout structure
     // -------------------------------------------------
 
     if (
@@ -263,7 +311,7 @@ Use exactly this structure:
     }
 
     // -------------------------------------------------
-    // 9. Create a map of valid exercise IDs
+    // 10. Create map of valid exercise IDs
     // -------------------------------------------------
 
     const validExercises = new Map();
@@ -276,64 +324,84 @@ Use exactly this structure:
     });
 
     // -------------------------------------------------
-    // 10. Validate every AI exercise
+    // 11. Validate every AI exercise
     // -------------------------------------------------
 
-    const validatedExercises = workout.exercises.map(
-      (aiExercise) => {
-        const databaseExercise =
-          validExercises.get(
-            aiExercise.exerciseId
-          );
+    const validatedExercises =
+      workout.exercises.map(
+        (aiExercise) => {
+          const databaseExercise =
+            validExercises.get(
+              aiExercise.exerciseId
+            );
 
-        // ---------------------------------------------
-        // Invalid ID
-        // ---------------------------------------------
+          // -------------------------------------------
+          // Invalid ID
+          // -------------------------------------------
 
-        if (!databaseExercise) {
-          throw new Error(
-            `AI returned an invalid exerciseId: ${aiExercise.exerciseId}`
-          );
+          if (!databaseExercise) {
+            throw new Error(
+              `AI returned an invalid exerciseId: ${aiExercise.exerciseId}`
+            );
+          }
+
+          // -------------------------------------------
+          // Validate exercise name
+          // -------------------------------------------
+
+          if (
+            aiExercise.name !==
+            databaseExercise.name
+          ) {
+            throw new Error(
+              `Exercise name mismatch for ${aiExercise.exerciseId}`
+            );
+          }
+
+          // -------------------------------------------
+          // Validate equipment
+          // -------------------------------------------
+
+          if (
+            !normalizedEquipment.includes(
+              databaseExercise.equipment
+            )
+          ) {
+            throw new Error(
+              `AI selected unavailable equipment: ${databaseExercise.equipment}`
+            );
+          }
+
+          // -------------------------------------------
+          // Return validated exercise
+          // -------------------------------------------
+
+          return {
+            exerciseId:
+              databaseExercise._id.toString(),
+
+            name:
+              databaseExercise.name,
+
+            sets:
+              Number(aiExercise.sets) || 3,
+
+            reps:
+              Number(aiExercise.reps) || 10,
+
+            restTime:
+              Number(
+                aiExercise.restTime
+              ) || 60,
+
+            instructions:
+              databaseExercise.instructions,
+          };
         }
-
-        // ---------------------------------------------
-        // Validate exercise name
-        // ---------------------------------------------
-
-        if (
-          aiExercise.name !==
-          databaseExercise.name
-        ) {
-          throw new Error(
-            `Exercise name mismatch for ${aiExercise.exerciseId}`
-          );
-        }
-
-        // ---------------------------------------------
-        // Return validated exercise
-        // ---------------------------------------------
-
-        return {
-          exerciseId:
-            databaseExercise._id.toString(),
-
-          name: databaseExercise.name,
-
-          sets: Number(aiExercise.sets) || 3,
-
-          reps: Number(aiExercise.reps) || 10,
-
-          restTime:
-            Number(aiExercise.restTime) || 60,
-
-          instructions:
-            databaseExercise.instructions,
-        };
-      }
-    );
+      );
 
     // -------------------------------------------------
-    // 11. Remove duplicate exercises
+    // 12. Remove duplicate exercises
     // -------------------------------------------------
 
     const uniqueExercises = [];
@@ -350,26 +418,35 @@ Use exactly this structure:
           exercise.exerciseId
         );
 
-        uniqueExercises.push(exercise);
+        uniqueExercises.push(
+          exercise
+        );
       }
     }
 
     // -------------------------------------------------
-    // 12. Return final validated workout
+    // 13. Return final validated workout
     // -------------------------------------------------
 
     return {
-      workoutName: workout.workoutName,
+      workoutName:
+        workout.workoutName,
 
       description:
         workout.description ||
-        `AI generated ${muscleGroup} workout for ${goal}.`,
+        `AI generated ${normalizedMuscleGroup} workout for ${goal}.`,
 
-      muscleGroup,
+      muscleGroup:
+        normalizedMuscleGroup,
 
-      difficulty,
+      difficulty:
+        normalizedDifficulty,
 
-      exercises: uniqueExercises,
+      equipment:
+        normalizedEquipment,
+
+      exercises:
+        uniqueExercises,
     };
   } catch (error) {
     console.error(

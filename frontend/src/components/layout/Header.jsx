@@ -32,12 +32,12 @@ const Header = ({ setIsSidebarOpen }) => {
         {/* Right Side */}
         <div className="ml-auto flex items-center gap-2">
 
-          {/* Notification */}
+          {/* Notification
           <button className="relative rounded-xl p-2.5 text-zinc-400 transition hover:bg-zinc-900 hover:text-white">
             <Bell size={20} />
 
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-orange-500" />
-          </button>
+          </button> */}
 
           {/* Profile */}
           <button className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-zinc-900"

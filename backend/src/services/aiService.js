@@ -457,3 +457,238 @@ Use exactly this structure:
     throw error;
   }
 };
+
+// =====================================================
+// AI PROGRESSION ANALYSIS
+// =====================================================
+
+export const generateProgression = async ({
+  exerciseName,
+  muscleGroup,
+  history,
+}) => {
+  try {
+    if (!exerciseName || !history?.length) {
+      throw new Error(
+        "Exercise name and workout history are required"
+      );
+    }
+
+    // -----------------------------------------
+    // Prepare performance history
+    // -----------------------------------------
+
+    const performanceHistory = history.map(
+      (session) => ({
+        date: session.date,
+        workoutName: session.workoutName,
+        maxWeight: session.maxWeight,
+        totalReps: session.totalReps,
+        totalVolume: session.totalVolume,
+        sets: session.sets,
+      })
+    );
+
+    // -----------------------------------------
+    // Gemini prompt
+    // -----------------------------------------
+
+    const prompt = `
+You are an AI fitness progression assistant.
+
+Analyze the user's exercise performance history and
+recommend a safe and realistic progression for their
+NEXT session.
+
+Exercise:
+${exerciseName}
+
+Muscle Group:
+${muscleGroup}
+
+Performance History:
+${JSON.stringify(
+  performanceHistory,
+  null,
+  2
+)}
+
+Your job is to:
+
+1. Analyze the recent performance trend.
+2. Determine whether the user is progressing,
+   maintaining, or regressing.
+3. Recommend the next training target.
+4. Decide whether to:
+   - increase weight
+   - maintain weight
+   - increase reps
+   - reduce weight
+   - maintain the current target
+5. Consider both weight and reps.
+6. Do not recommend an unrealistic jump in weight.
+7. If the user is clearly progressing, recommend
+   progressive overload.
+8. If performance is declining, prioritize recovery
+   and maintaining or slightly reducing the load.
+9. Do not invent historical data.
+
+Return ONLY valid JSON.
+
+Required format:
+
+{
+  "status": "progressing | maintaining | regressing",
+  "recommendation": {
+    "action": "increase_weight | maintain_weight | increase_reps | reduce_weight | maintain",
+    "weight": number,
+    "targetReps": number,
+    "sets": number
+  },
+  "reason": "short explanation",
+  "nextGoal": "short-term goal for the next session"
+}
+
+Important:
+- Keep the recommendation practical.
+- Weight should be a realistic increment.
+- Do not make large jumps.
+- Use the user's actual performance history.
+`;
+
+    // -----------------------------------------
+    // Generate AI response
+    // -----------------------------------------
+
+    const response =
+      await ai.models.generateContent({
+        model: "gemini-3.5-flash",
+        contents: prompt,
+      });
+
+    let text =
+      response.text?.trim();
+
+    if (!text) {
+      throw new Error(
+        "Empty AI progression response"
+      );
+    }
+
+    // -----------------------------------------
+    // Remove markdown JSON fences
+    // -----------------------------------------
+
+    text = text
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    // -----------------------------------------
+    // Parse JSON
+    // -----------------------------------------
+
+    let progression;
+
+    try {
+      progression = JSON.parse(text);
+    } catch (error) {
+      console.error(
+        "Invalid AI progression JSON:",
+        text
+      );
+
+      throw new Error(
+        "AI returned invalid progression data"
+      );
+    }
+
+    // -----------------------------------------
+    // Validate response
+    // -----------------------------------------
+
+    const validStatuses = [
+      "progressing",
+      "maintaining",
+      "regressing",
+    ];
+
+    const validActions = [
+      "increase_weight",
+      "maintain_weight",
+      "increase_reps",
+      "reduce_weight",
+      "maintain",
+    ];
+
+    if (
+      !validStatuses.includes(
+        progression.status
+      )
+    ) {
+      throw new Error(
+        "Invalid progression status returned by AI"
+      );
+    }
+
+    if (
+      !progression.recommendation ||
+      !validActions.includes(
+        progression.recommendation.action
+      )
+    ) {
+      throw new Error(
+        "Invalid progression recommendation returned by AI"
+      );
+    }
+
+    // -----------------------------------------
+    // Return structured progression
+    // -----------------------------------------
+
+    return {
+      exerciseName,
+      muscleGroup,
+
+      status:
+        progression.status,
+
+      recommendation: {
+        action:
+          progression.recommendation
+            .action,
+
+        weight: Number(
+          progression.recommendation
+            .weight
+        ),
+
+        targetReps: Number(
+          progression.recommendation
+            .targetReps
+        ),
+
+        sets: Number(
+          progression.recommendation
+            .sets
+        ),
+      },
+
+      reason:
+        progression.reason ||
+        "Continue following your current progression plan.",
+
+      nextGoal:
+        progression.nextGoal ||
+        "Improve your performance in the next session.",
+    };
+  } catch (error) {
+    console.error(
+      "AI progression error:",
+      error
+    );
+
+    throw error;
+  }
+};

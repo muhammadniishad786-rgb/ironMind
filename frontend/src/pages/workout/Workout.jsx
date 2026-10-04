@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
@@ -229,18 +230,32 @@ const Workouts = () => {
     value
   ) => {
     setWorkoutExercises((prev) =>
-      prev.map((item, i) =>
-        i === index
-          ? {
-              ...item,
-              [field]:
-                field === "exercise"
-                  ? value
-                  : Number(value),
-            }
-          : item
-      )
+      prev.map((item, i) => {
+        if (i !== index) {
+          return item;
+        }
+
+        return {
+          ...item,
+          [field]:
+            field === "exercise"
+              ? value
+              : value === ""
+              ? ""
+              : Number(value),
+        };
+      })
     );
+  };
+
+  // =========================
+  // SELECT ZERO VALUE
+  // =========================
+
+  const selectZeroValue = (event, value) => {
+    if (value === 0) {
+      event.target.select();
+    }
   };
 
   // =========================
@@ -257,10 +272,22 @@ const Workouts = () => {
       exercises: workoutExercises.map(
         (item) => ({
           exercise: item.exercise,
-          sets: item.sets,
-          reps: item.reps,
-          weight: item.weight,
-          restTime: item.restTime,
+          sets:
+            item.sets === ""
+              ? 0
+              : Number(item.sets),
+          reps:
+            item.reps === ""
+              ? 0
+              : Number(item.reps),
+          weight:
+            item.weight === ""
+              ? 0
+              : Number(item.weight),
+          restTime:
+            item.restTime === ""
+              ? 0
+              : Number(item.restTime),
         })
       ),
     };
@@ -286,17 +313,16 @@ const Workouts = () => {
       "Are you sure you want to delete this workout?"
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     dispatch(deleteWorkout(workoutId));
   };
 
   return (
     <div className="space-y-8">
-
-      {/* =========================
-          HEADER
-      ========================= */}
+      {/* HEADER */}
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
@@ -318,13 +344,10 @@ const Workouts = () => {
         </button>
       </div>
 
-      {/* =========================
-          FORM
-      ========================= */}
+      {/* FORM */}
 
       {showForm && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5 sm:p-6">
-
           {/* FORM HEADER */}
 
           <div className="mb-6 flex items-center justify-between">
@@ -370,7 +393,6 @@ const Workouts = () => {
             onSubmit={handleSubmit}
             className="space-y-6"
           >
-
             {/* NAME */}
 
             <div>
@@ -413,7 +435,6 @@ const Workouts = () => {
             {/* EXERCISES */}
 
             <div>
-
               <div className="mb-3 flex items-center justify-between">
                 <label className="text-sm font-medium text-zinc-300">
                   Exercises
@@ -430,18 +451,15 @@ const Workouts = () => {
               </div>
 
               <div className="space-y-4">
-
                 {workoutExercises.map(
                   (item, index) => (
                     <div
                       key={index}
                       className="rounded-xl border border-zinc-800 bg-zinc-950 p-4"
                     >
-
                       {/* EXERCISE HEADER */}
 
                       <div className="mb-4 flex items-center justify-between">
-
                         <div className="flex items-center gap-2">
                           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-orange-500">
                             <Dumbbell size={16} />
@@ -466,7 +484,6 @@ const Workouts = () => {
                             <Trash2 size={17} />
                           </button>
                         )}
-
                       </div>
 
                       {/* EXERCISE SELECT */}
@@ -518,7 +535,6 @@ const Workouts = () => {
                       {/* SETS / REPS / WEIGHT / REST */}
 
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-
                         {/* SETS */}
 
                         <div>
@@ -530,6 +546,12 @@ const Workouts = () => {
                             type="number"
                             min="1"
                             value={item.sets}
+                            onFocus={(event) =>
+                              selectZeroValue(
+                                event,
+                                item.sets
+                              )
+                            }
                             onChange={(e) =>
                               handleExerciseChange(
                                 index,
@@ -553,6 +575,12 @@ const Workouts = () => {
                             type="number"
                             min="1"
                             value={item.reps}
+                            onFocus={(event) =>
+                              selectZeroValue(
+                                event,
+                                item.reps
+                              )
+                            }
                             onChange={(e) =>
                               handleExerciseChange(
                                 index,
@@ -575,7 +603,14 @@ const Workouts = () => {
                           <input
                             type="number"
                             min="0"
+                            step="0.5"
                             value={item.weight}
+                            onFocus={(event) =>
+                              selectZeroValue(
+                                event,
+                                item.weight
+                              )
+                            }
                             onChange={(e) =>
                               handleExerciseChange(
                                 index,
@@ -598,6 +633,12 @@ const Workouts = () => {
                             type="number"
                             min="0"
                             value={item.restTime}
+                            onFocus={(event) =>
+                              selectZeroValue(
+                                event,
+                                item.restTime
+                              )
+                            }
                             onChange={(e) =>
                               handleExerciseChange(
                                 index,
@@ -608,19 +649,16 @@ const Workouts = () => {
                             className="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-3 text-sm text-white outline-none focus:border-orange-500"
                           />
                         </div>
-
                       </div>
                     </div>
                   )
                 )}
-
               </div>
             </div>
 
             {/* FORM BUTTONS */}
 
             <div className="flex flex-col-reverse gap-3 border-t border-zinc-800 pt-5 sm:flex-row sm:justify-end">
-
               <button
                 type="button"
                 onClick={closeForm}
@@ -637,7 +675,6 @@ const Workouts = () => {
                 }
                 className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-semibold text-black transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-50"
               >
-
                 {(createLoading ||
                   updateLoading) && (
                   <Loader2
@@ -653,18 +690,13 @@ const Workouts = () => {
                   : editingWorkout
                   ? "Update Workout"
                   : "Create Workout"}
-
               </button>
-
             </div>
-
           </form>
         </div>
       )}
 
-      {/* =========================
-          LOADING
-      ========================= */}
+      {/* LOADING */}
 
       {loading && (
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center">
@@ -679,9 +711,7 @@ const Workouts = () => {
         </div>
       )}
 
-      {/* =========================
-          ERROR
-      ========================= */}
+      {/* ERROR */}
 
       {error && (
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-6">
@@ -691,16 +721,12 @@ const Workouts = () => {
         </div>
       )}
 
-      {/* =========================
-          WORKOUT LIST
-      ========================= */}
+      {/* WORKOUT LIST */}
 
       {!loading && !error && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-
           {workouts.length === 0 ? (
             <div className="col-span-full rounded-2xl border border-zinc-800 bg-zinc-900 p-10 text-center">
-
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-800 text-zinc-500">
                 <Dumbbell size={22} />
               </div>
@@ -713,7 +739,6 @@ const Workouts = () => {
                 Create your first workout to
                 get started.
               </p>
-
             </div>
           ) : (
             workouts.map((workout) => (
@@ -721,18 +746,13 @@ const Workouts = () => {
                 key={workout._id}
                 className="group rounded-2xl border border-zinc-800 bg-zinc-900 p-5 transition hover:border-orange-500/40 hover:bg-zinc-[950]"
               >
-
-                {/* =========================
-                    CLICKABLE WORKOUT CONTENT
-                ========================= */}
+                {/* CLICKABLE WORKOUT CONTENT */}
 
                 <Link
                   to={`/workouts/${workout._id}`}
                   className="block"
                 >
-
                   <div className="flex items-start gap-3">
-
                     <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500">
                       <Dumbbell size={21} />
                     </div>
@@ -747,13 +767,11 @@ const Workouts = () => {
                           "No description"}
                       </p>
                     </div>
-
                   </div>
 
                   {/* EXERCISE COUNT */}
 
                   <div className="mt-5 flex items-center justify-between border-t border-zinc-800 pt-4">
-
                     <span className="text-sm text-zinc-500">
                       Exercises
                     </span>
@@ -762,13 +780,11 @@ const Workouts = () => {
                       {workout.exercises
                         ?.length || 0}
                     </span>
-
                   </div>
 
                   {/* VIEW DETAILS */}
 
                   <div className="mt-4 flex items-center justify-between">
-
                     <span className="text-xs font-medium text-zinc-500 transition group-hover:text-orange-500">
                       View workout details
                     </span>
@@ -777,17 +793,12 @@ const Workouts = () => {
                       size={16}
                       className="text-zinc-600 transition group-hover:translate-x-1 group-hover:text-orange-500"
                     />
-
                   </div>
-
                 </Link>
 
-                {/* =========================
-                    EDIT / DELETE
-                ========================= */}
+                {/* EDIT / DELETE */}
 
                 <div className="mt-4 flex items-center justify-end gap-1 border-t border-zinc-800 pt-3">
-
                   {/* EDIT */}
 
                   <button
@@ -821,16 +832,12 @@ const Workouts = () => {
                       <Trash2 size={16} />
                     )}
                   </button>
-
                 </div>
-
               </div>
             ))
           )}
-
         </div>
       )}
-
     </div>
   );
 };

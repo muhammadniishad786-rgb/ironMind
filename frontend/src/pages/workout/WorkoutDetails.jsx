@@ -22,6 +22,10 @@ import {
   Trophy,
   Trash2,
   PlayCircle,
+  Sparkles,
+  TrendingUp,
+  Minus,
+  TrendingDown,
 } from "lucide-react";
 
 import {
@@ -31,6 +35,11 @@ import {
   removeWorkoutExercise,
   completeWorkout,
 } from "../../store/slices/workoutSlice";
+
+import {
+  getProgression,
+  clearProgression,
+} from "../../store/slices/aiSlice";
 
 const WorkoutDetails = () => {
   const { id } = useParams();
@@ -53,6 +62,9 @@ const WorkoutDetails = () => {
   const [performedSets, setPerformedSets] =
     useState({});
 
+  const [activeProgressionExerciseId, setActiveProgressionExerciseId] =
+    useState(null);
+
   // =========================
   // REDUX STATE
   // =========================
@@ -72,6 +84,12 @@ const WorkoutDetails = () => {
     completeWorkoutError,
   } = useSelector((state) => state.workout);
 
+  const {
+    progression,
+    progressionLoading,
+    progressionError,
+  } = useSelector((state) => state.ai);
+
   // =========================
   // GET WORKOUT
   // =========================
@@ -81,6 +99,7 @@ const WorkoutDetails = () => {
 
     return () => {
       dispatch(clearSelectedWorkout());
+      dispatch(clearProgression());
     };
   }, [dispatch, id]);
 
@@ -185,7 +204,10 @@ const WorkoutDetails = () => {
 
           return {
             ...set,
-            [field]: Number(value),
+            [field]:
+              value === ""
+                ? ""
+                : Number(value),
           };
         }
       );
@@ -257,10 +279,22 @@ const WorkoutDetails = () => {
               ? exercise?._id
               : exercise;
 
+          const sets =
+            performedSets[exerciseId] || [];
+
           return {
             exercise: exerciseId,
-            performedSets:
-              performedSets[exerciseId] || [],
+            performedSets: sets.map((set) => ({
+              ...set,
+              reps:
+                set.reps === ""
+                  ? 0
+                  : Number(set.reps),
+              weight:
+                set.weight === ""
+                  ? 0
+                  : Number(set.weight),
+            })),
           };
         }
       );
@@ -301,13 +335,56 @@ const WorkoutDetails = () => {
     const sets =
       performedSets[exerciseId] || [];
 
+    const normalizedSets = sets.map((set) => ({
+      ...set,
+      reps:
+        set.reps === ""
+          ? 0
+          : Number(set.reps),
+      weight:
+        set.weight === ""
+          ? 0
+          : Number(set.weight),
+    }));
+
     dispatch(
       completeWorkoutExercise({
         workoutId: id,
         exerciseId,
-        performedSets: sets,
+        performedSets: normalizedSets,
       })
     );
+  };
+
+  // =========================
+  // GET AI PROGRESSION
+  // =========================
+
+  const handleGetAIProgression = async (
+    exerciseId
+  ) => {
+    if (!exerciseId) {
+      return;
+    }
+
+    dispatch(clearProgression());
+
+    setActiveProgressionExerciseId(
+      exerciseId
+    );
+
+    await dispatch(
+      getProgression(exerciseId)
+    );
+  };
+
+  // =========================
+  // CLOSE AI PROGRESSION
+  // =========================
+
+  const handleCloseAIProgression = () => {
+    setActiveProgressionExerciseId(null);
+    dispatch(clearProgression());
   };
 
   // =========================
@@ -494,9 +571,7 @@ const WorkoutDetails = () => {
           )}
         </div>
 
-        {/* =========================
-            START / TIMER / COMPLETE
-        ========================= */}
+        {/* START / TIMER / COMPLETE */}
 
         <div className="flex flex-wrap items-center gap-3">
           {workout.completed ? (
@@ -550,9 +625,7 @@ const WorkoutDetails = () => {
         </div>
       </div>
 
-      {/* =========================
-          COMPLETION ERROR
-      ========================= */}
+      {/* COMPLETION ERROR */}
 
       {completeWorkoutError && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4">
@@ -562,9 +635,7 @@ const WorkoutDetails = () => {
         </div>
       )}
 
-      {/* =========================
-          COMPLETION PROGRESS
-      ========================= */}
+      {/* COMPLETION PROGRESS */}
 
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -607,9 +678,7 @@ const WorkoutDetails = () => {
         </div>
       </div>
 
-      {/* =========================
-          WORKOUT STATS
-      ========================= */}
+      {/* WORKOUT STATS */}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Exercises */}
@@ -714,9 +783,7 @@ const WorkoutDetails = () => {
         </div>
       </div>
 
-      {/* =========================
-          COMPLETE ERROR
-      ========================= */}
+      {/* COMPLETE ERROR */}
 
       {exerciseCompleteError && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4">
@@ -726,9 +793,7 @@ const WorkoutDetails = () => {
         </div>
       )}
 
-      {/* =========================
-          REMOVE ERROR
-      ========================= */}
+      {/* REMOVE ERROR */}
 
       {exerciseRemoveError && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4">
@@ -738,9 +803,7 @@ const WorkoutDetails = () => {
         </div>
       )}
 
-      {/* =========================
-          EXERCISES
-      ========================= */}
+      {/* EXERCISES */}
 
       <div className="space-y-5">
         <div>
@@ -829,6 +892,10 @@ const WorkoutDetails = () => {
                 const currentSets =
                   performedSets[exerciseId] || [];
 
+                const isShowingProgression =
+                  activeProgressionExerciseId ===
+                  exerciseId;
+
                 return (
                   <div
                     key={
@@ -841,9 +908,7 @@ const WorkoutDetails = () => {
                         : "border-zinc-800"
                     }`}
                   >
-                    {/* =========================
-                        EXERCISE HEADER
-                    ========================= */}
+                    {/* EXERCISE HEADER */}
 
                     <div className="flex flex-col gap-4 border-b border-zinc-800 p-5 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-4">
@@ -917,6 +982,46 @@ const WorkoutDetails = () => {
                               />
                             </Link>
                           )}
+
+                        {/* AI PROGRESSION */}
+
+                        {exerciseCompleted && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              isShowingProgression
+                                ? handleCloseAIProgression()
+                                : handleGetAIProgression(
+                                    exerciseId
+                                  )
+                            }
+                            disabled={
+                              progressionLoading &&
+                              isShowingProgression
+                            }
+                            className="inline-flex items-center gap-2 rounded-xl border border-purple-500/20 bg-purple-500/10 px-4 py-2.5 text-sm font-semibold text-purple-400 transition hover:bg-purple-500/20 hover:text-purple-300 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {progressionLoading &&
+                            isShowingProgression ? (
+                              <>
+                                <Loader2
+                                  size={17}
+                                  className="animate-spin"
+                                />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles
+                                  size={17}
+                                />
+                                {isShowingProgression
+                                  ? "Hide AI"
+                                  : "AI Progression"}
+                              </>
+                            )}
+                          </button>
+                        )}
 
                         {/* COMPLETE EXERCISE */}
 
@@ -997,9 +1102,321 @@ const WorkoutDetails = () => {
                       </div>
                     </div>
 
-                    {/* =========================
-                        EXERCISE CONTENT
-                    ========================= */}
+                    {/* AI PROGRESSION CARD */}
+
+                    {isShowingProgression && (
+                      <div className="border-b border-zinc-800 bg-gradient-to-br from-purple-500/5 via-zinc-900 to-orange-500/5 p-5">
+                        {progressionLoading ? (
+                          <div className="flex items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/5 p-8">
+                            <div className="text-center">
+                              <Loader2
+                                size={28}
+                                className="mx-auto animate-spin text-purple-400"
+                              />
+
+                              <p className="mt-3 text-sm font-medium text-white">
+                                AI is analyzing your performance...
+                              </p>
+
+                              <p className="mt-1 text-xs text-zinc-500">
+                                Checking your workout history
+                                and progression trend.
+                              </p>
+                            </div>
+                          </div>
+                        ) : progressionError ? (
+                          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-5">
+                            <div className="flex items-start gap-3">
+                              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-400">
+                                <Target size={18} />
+                              </div>
+
+                              <div>
+                                <p className="text-sm font-semibold text-white">
+                                  Unable to generate progression
+                                </p>
+
+                                <p className="mt-1 text-sm text-red-400">
+                                  {progressionError}
+                                </p>
+
+                                <p className="mt-2 text-xs text-zinc-500">
+                                  Make sure you have completed
+                                  the exercise with actual
+                                  reps and weight data.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : progression?.progression ? (
+                          <div className="rounded-2xl border border-purple-500/20 bg-zinc-950 p-5">
+                            {/* AI HEADER */}
+
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+                                  <Sparkles
+                                    size={21}
+                                  />
+                                </div>
+
+                                <div>
+                                  <p className="text-xs font-medium uppercase tracking-wider text-purple-400">
+                                    IronMind AI
+                                  </p>
+
+                                  <h4 className="mt-1 font-semibold text-white">
+                                    Progression Recommendation
+                                  </h4>
+                                </div>
+                              </div>
+
+                              {/* STATUS */}
+
+                              <div
+                                className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                                  progression.progression
+                                    .status ===
+                                  "progressing"
+                                    ? "bg-green-500/10 text-green-400"
+                                    : progression.progression
+                                        .status ===
+                                      "regressing"
+                                    ? "bg-red-500/10 text-red-400"
+                                    : "bg-yellow-500/10 text-yellow-400"
+                                }`}
+                              >
+                                {progression.progression
+                                  .status ===
+                                "progressing" ? (
+                                  <TrendingUp
+                                    size={14}
+                                  />
+                                ) : progression.progression
+                                    .status ===
+                                  "regressing" ? (
+                                  <TrendingDown
+                                    size={14}
+                                  />
+                                ) : (
+                                  <Minus
+                                    size={14}
+                                  />
+                                )}
+
+                                {formatText(
+                                  progression.progression
+                                    .status
+                                )}
+                              </div>
+                            </div>
+
+                            {/* RECOMMENDATION */}
+
+                            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                                <div className="flex items-center gap-2">
+                                  <Weight
+                                    size={17}
+                                    className="text-orange-500"
+                                  />
+
+                                  <p className="text-xs text-zinc-500">
+                                    Recommended Weight
+                                  </p>
+                                </div>
+
+                                <p className="mt-2 text-2xl font-bold text-white">
+                                  {
+                                    progression
+                                      .progression
+                                      .recommendation
+                                      .weight
+                                  }{" "}
+                                  <span className="text-sm font-medium text-zinc-500">
+                                    kg
+                                  </span>
+                                </p>
+                              </div>
+
+                              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                                <div className="flex items-center gap-2">
+                                  <Target
+                                    size={17}
+                                    className="text-orange-500"
+                                  />
+
+                                  <p className="text-xs text-zinc-500">
+                                    Target Reps
+                                  </p>
+                                </div>
+
+                                <p className="mt-2 text-2xl font-bold text-white">
+                                  {
+                                    progression
+                                      .progression
+                                      .recommendation
+                                      .targetReps
+                                  }
+                                </p>
+                              </div>
+
+                              <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+                                <div className="flex items-center gap-2">
+                                  <Repeat
+                                    size={17}
+                                    className="text-orange-500"
+                                  />
+
+                                  <p className="text-xs text-zinc-500">
+                                    Recommended Sets
+                                  </p>
+                                </div>
+
+                                <p className="mt-2 text-2xl font-bold text-white">
+                                  {
+                                    progression
+                                      .progression
+                                      .recommendation
+                                      .sets
+                                  }
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* ACTION */}
+
+                            <div className="mt-4 rounded-xl border border-orange-500/20 bg-orange-500/5 p-4">
+                              <p className="text-xs font-medium uppercase tracking-wider text-orange-500">
+                                Recommended Action
+                              </p>
+
+                              <p className="mt-1 text-sm font-semibold text-white">
+                                {formatText(
+                                  progression
+                                    .progression
+                                    .recommendation
+                                    .action
+                                )}
+                              </p>
+                            </div>
+
+                            {/* REASON */}
+
+                            <div className="mt-4">
+                              <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                                Why?
+                              </p>
+
+                              <p className="mt-2 text-sm leading-6 text-zinc-400">
+                                {
+                                  progression
+                                    .progression
+                                    .reason
+                                }
+                              </p>
+                            </div>
+
+                            {/* NEXT GOAL */}
+
+                            <div className="mt-4 rounded-xl border border-green-500/20 bg-green-500/5 p-4">
+                              <div className="flex items-center gap-2">
+                                <Trophy
+                                  size={17}
+                                  className="text-green-400"
+                                />
+
+                                <p className="text-xs font-medium uppercase tracking-wider text-green-400">
+                                  Next Goal
+                                </p>
+                              </div>
+
+                              <p className="mt-2 text-sm font-medium leading-6 text-white">
+                                {
+                                  progression
+                                    .progression
+                                    .nextGoal
+                                }
+                              </p>
+                            </div>
+
+                            {/* HISTORY SUMMARY */}
+
+                            {progression.history
+                              ?.length > 0 && (
+                              <div className="mt-5 border-t border-zinc-800 pt-5">
+                                <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+                                  Recent Performance
+                                </p>
+
+                                <div className="mt-3 space-y-2">
+                                  {progression.history.map(
+                                    (
+                                      session,
+                                      sessionIndex
+                                    ) => (
+                                      <div
+                                        key={
+                                          `${session.date}-${sessionIndex}`
+                                        }
+                                        className="flex flex-col gap-2 rounded-xl bg-zinc-900 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                      >
+                                        <div>
+                                          <p className="text-sm font-medium text-white">
+                                            {
+                                              session.workoutName
+                                            }
+                                          </p>
+
+                                          <p className="mt-1 text-xs text-zinc-600">
+                                            {formatDate(
+                                              session.date
+                                            )}
+                                          </p>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-3 text-xs text-zinc-400">
+                                          <span>
+                                            Max:{" "}
+                                            <strong className="text-white">
+                                              {
+                                                session.maxWeight
+                                              }{" "}
+                                              kg
+                                            </strong>
+                                          </span>
+
+                                          <span>
+                                            Reps:{" "}
+                                            <strong className="text-white">
+                                              {
+                                                session.totalReps
+                                              }
+                                            </strong>
+                                          </span>
+
+                                          <span>
+                                            Volume:{" "}
+                                            <strong className="text-white">
+                                              {
+                                                session.totalVolume
+                                              }{" "}
+                                              kg
+                                            </strong>
+                                          </span>
+                                        </div>
+                                      </div>
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+
+                    {/* EXERCISE CONTENT */}
 
                     <div className="grid gap-6 p-5 lg:grid-cols-3">
                       {/* IMAGE */}
@@ -1122,9 +1539,7 @@ const WorkoutDetails = () => {
                           </div>
                         </div>
 
-                        {/* =========================
-                            ACTUAL SET TRACKER
-                        ========================= */}
+                        {/* ACTUAL SET TRACKER */}
 
                         {isWorkoutStarted && (
                           <div className="mt-6 rounded-2xl border border-orange-500/20 bg-orange-500/5 p-4">
@@ -1151,7 +1566,7 @@ const WorkoutDetails = () => {
                                       exerciseId
                                     )
                                   }
-                                  className="rounded-lg bg-zinc-800 px-3 py-2 text-xs font-medium text-white hover:bg-zinc-700"
+                                  className="rounded-lg bg-zinc-800 px-3 py-2 text-xs font-medium text-white transition hover:bg-zinc-700"
                                 >
                                   Load Sets
                                 </button>
@@ -1204,6 +1619,16 @@ const WorkoutDetails = () => {
                                             value={
                                               set.reps
                                             }
+                                            onFocus={(
+                                              event
+                                            ) => {
+                                              if (
+                                                set.reps ===
+                                                0
+                                              ) {
+                                                event.target.select();
+                                              }
+                                            }}
                                             onChange={(
                                               event
                                             ) =>
@@ -1216,7 +1641,10 @@ const WorkoutDetails = () => {
                                                   .value
                                               )
                                             }
-                                            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                                            disabled={
+                                              set.completed
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
                                           />
                                         </div>
 
@@ -1235,6 +1663,16 @@ const WorkoutDetails = () => {
                                             value={
                                               set.weight
                                             }
+                                            onFocus={(
+                                              event
+                                            ) => {
+                                              if (
+                                                set.weight ===
+                                                0
+                                              ) {
+                                                event.target.select();
+                                              }
+                                            }}
                                             onChange={(
                                               event
                                             ) =>
@@ -1247,7 +1685,10 @@ const WorkoutDetails = () => {
                                                   .value
                                               )
                                             }
-                                            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                                            disabled={
+                                              set.completed
+                                            }
+                                            className="mt-1 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-white outline-none transition focus:border-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
                                           />
                                         </div>
 
@@ -1341,9 +1782,7 @@ const WorkoutDetails = () => {
         )}
       </div>
 
-      {/* =========================
-          FINISH WORKOUT FOOTER
-      ========================= */}
+      {/* FINISH WORKOUT FOOTER */}
 
       {isWorkoutStarted &&
         !workout.completed &&
